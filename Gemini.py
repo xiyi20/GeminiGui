@@ -50,11 +50,11 @@ class BlurredLabel(QLabel):
             last_time=item.get('last_time',3)
             shape=item.get('shape',1)
             MoveLabel(self,type=type,color=color,last_time=last_time,shape=shape)
-        self.blur(0)
-    def blur(self,state):
+        self.blur(0,100)
+    def blur(self,state,num):
         if state==0:
             blur_effect=QGraphicsBlurEffect()
-            blur_effect.setBlurRadius(100)
+            blur_effect.setBlurRadius(num)
             self.setGraphicsEffect(blur_effect)
         else:
             self.setGraphicsEffect(None)
@@ -131,6 +131,15 @@ class MoveLabel(QLabel):
         self.animation.setDuration(self.last_time*1000)
         self.animation.setEasingCurve(QEasingCurve.Type.InOutQuad)  # 设置缓动曲线
         self.animation.start()
+
+class MessageBox(QMessageBox):
+    def __init__(self,msg):
+        super().__init__()
+        self.setWindowIcon(QIcon('git/GeminiGui/images/warm.png'))
+        self.setIcon(QMessageBox.Icon.Warning)
+        self.setWindowTitle('警告')
+        self.setText(msg)
+        self.exec()
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -237,13 +246,58 @@ class SettingWindow(QMainWindow):
         f1=QFrame(self)
         f1.resize(400,400)
         layout_f1=QVBoxLayout(f1)
-        def blur_open(bg,state):
-            bg.blur(state)
-            # label.blur(state)
-        cb1=QCheckBox('取消模糊')
-        cb1.stateChanged.connect(lambda state: blur_open(self.bg,state))
-        layout_f1.addWidget(cb1)
 
+        l1=QLabel('模糊设置')
+        l1.setFont(QFont('微软雅黑',15))
+        l1.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        def blur_open(bg,state,num):
+            bg.blur(state,num)
+            label.blur(state,num)
+        cb1=QCheckBox('取消模糊')
+        cb1.stateChanged.connect(lambda state: blur_open(self.bg,state,100))
+
+        def blur_radius(num):
+            try:
+                int(num)
+                blur_open(self.bg,0,int(num))
+                cb1.setChecked(False)
+            except ValueError:
+                MessageBox('模糊程度应为整数型(int)')
+
+        layout_blur=QHBoxLayout()
+        l2=QLabel('模糊程度:')
+        t1=QLineEdit()
+        t1.setStyleSheet('background:rgba(255,255,255,0.5)')
+        t1.setMaximumWidth(50)
+        def showtext():
+            QToolTip.showText(QCursor.pos(),'数字越大性能开销越大!')
+        b1=QPushButton()
+        b1.setIcon(QIcon('git/GeminiGui/images/warm.png'))
+        b1.setStyleSheet('background:rgba(0,0,0,0)')
+        b1.clicked.connect(showtext)
+        b2=QPushButton()
+        b2.setIcon(QIcon('git/GeminiGui/images/save.png'))
+        b2.setStyleSheet('background:rgba(0,0,0,0)')
+        b2.clicked.connect(lambda: blur_radius(t1.text()))
+        layout_blur.addWidget(l2)
+        layout_blur.addWidget(t1)
+        layout_blur.addWidget(b1)
+        layout_blur.addStretch(1)
+        layout_blur.addWidget(b2)
+
+        l3=QLabel('界面设置')
+        l3.setFont(QFont('微软雅黑',15))
+        l3.setAlignment(Qt.AlignmentFlag.AlignHCenter)
+        layout_window=QHBoxLayout()
+        
+
+        layout_f1.addWidget(l1)
+        layout_f1.addWidget(cb1)
+        layout_f1.addLayout(layout_blur)
+        layout_f1.addWidget(l3)
+        layout_f1.addLayout(layout_window)
+        layout_f1.addStretch(3)
 
 
            
