@@ -50,9 +50,14 @@ class BlurredLabel(QLabel):
             last_time=item.get('last_time',3)
             shape=item.get('shape',1)
             MoveLabel(self,type=type,color=color,last_time=last_time,shape=shape)
-        blur_effect=QGraphicsBlurEffect()
-        blur_effect.setBlurRadius(300)
-        # self.setGraphicsEffect(blur_effect)
+        self.blur(0)
+    def blur(self,state):
+        if state==0:
+            blur_effect=QGraphicsBlurEffect()
+            blur_effect.setBlurRadius(100)
+            self.setGraphicsEffect(blur_effect)
+        else:
+            self.setGraphicsEffect(None)
 
 class MoveLabel(QLabel):
     def __init__(self,parent=None,type=11,shape=0,color='blue',last_time=5):
@@ -163,10 +168,8 @@ class MainWindow(QMainWindow):
 
         def settingwindow():
             if self.settingw is None:
-                self.settingw=SettingWindow()
+                self.settingw=SettingWindow(label)
             self.settingw.show()
-
-
         layout_top=QHBoxLayout()
         layout_f1.addLayout(layout_top)
         b1=QPushButton()
@@ -210,8 +213,9 @@ class MainWindow(QMainWindow):
         layout_f1.addWidget(t2)
         
 class SettingWindow(QMainWindow):
-    def __init__(self):
+    def __init__(self,bg):
         super().__init__()
+        self.bg=bg
         self.initUI()
     def initUI(self):
         self.setWindowTitle('设置')   
@@ -229,6 +233,18 @@ class SettingWindow(QMainWindow):
         label=BlurredLabel(self,shapes)
         layout_center.addWidget(label)
         self.setCentralWidget(center)
+
+        f1=QFrame(self)
+        f1.resize(400,400)
+        layout_f1=QVBoxLayout(f1)
+        def blur_open(bg,state):
+            bg.blur(state)
+            # label.blur(state)
+        cb1=QCheckBox('取消模糊')
+        cb1.stateChanged.connect(lambda state: blur_open(self.bg,state))
+        layout_f1.addWidget(cb1)
+
+
 
            
 def main():
