@@ -1,9 +1,13 @@
 import google.generativeai as genai
 import sys
+import re
 import threading
 from PyQt6.QtWidgets import *
 from PyQt6.QtGui import *
 from PyQt6.QtCore import *
+
+find_radius=re.compile(r'border-radius:(.*?)px')
+ml=[]
 
 class Gemini:
     genai.configure(api_key="AIzaSyCYbTJdgdMy5ETlRFPAcpQozMrnYLp5g0w",transport='rest')
@@ -43,13 +47,14 @@ class Gemini:
 class BlurredLabel(QLabel):
     def __init__(self,parent=None,items=[]):
         super().__init__(parent)
+        global ml
         self.setGeometry(0,0,parent.width(),parent.height())
         for item in items:
             type=item.get('type',11)
             color=item.get('color','red')
             last_time=item.get('last_time',3)
             shape=item.get('shape',1)
-            MoveLabel(self,type=type,color=color,last_time=last_time,shape=shape)
+            ml.append(MoveLabel(self,type=type,color=color,last_time=last_time,shape=shape))
         self.blur(0,100)
     def blur(self,state,num):
         if state==0:
@@ -93,6 +98,7 @@ class MoveLabel(QLabel):
             self.end_rect=QRectF(parent.width()-self.side_width,(parent.height()-self.side_width)//2,self.side_width,self.side_width)
         self.animation=QPropertyAnimation(self,b'geometry')
         self.animation.finished.connect(self.toggleAnimation)
+        self.animationSpeed(500)
         self.startAnimation()
     def paintEvent(self,event):
         super().paintEvent(event)
@@ -125,11 +131,12 @@ class MoveLabel(QLabel):
         self.animation.setStartValue(a)
         self.animation.setEndValue(b)
         self.animation.start()
+    def animationSpeed(self,speed):
+        self.animation.setDuration(self.last_time*speed)
     def startAnimation(self):
         self.animation.setStartValue(self.start_rect)
         self.animation.setEndValue(self.end_rect)
-        self.animation.setDuration(self.last_time*1000)
-        self.animation.setEasingCurve(QEasingCurve.Type.InOutQuad)  # 设置缓动曲线
+        self.animation.setEasingCurve(QEasingCurve.Type.InOutQuart)  # 设置缓动曲线
         self.animation.start()
 
 class MessageBox(QMessageBox):
@@ -140,6 +147,14 @@ class MessageBox(QMessageBox):
         self.setWindowTitle('警告')
         self.setText(msg)
         self.exec()
+
+class GetColor(QColorDialog):
+    def __init__(self):
+        super().__init__()  
+    def getcolor(self):
+        self.color=self.getColor()
+        if self.color.isValid():
+            return self.color.name()
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -160,11 +175,11 @@ class MainWindow(QMainWindow):
         center=QWidget(self)
         layout_center=QVBoxLayout(center)
         shapes=[
-            {'type':11,'shape':1,'color':'#FF416C','last_time':6},
-            {'type':21,'shape':3,'color':'#12c2e9','last_time':5},
-            {'type':31,'shape':1,'color':'#c471ed','last_time':7},
-            {'type':41,'shape':2,'color':'#f64f59','last_time':8},
-            {'type':12,'shape':1,'color':'#7303c0','last_time':9},
+            {'type':11,'shape':1,'color':'red','last_time':6},
+            {'type':21,'shape':3,'color':'blue','last_time':5},
+            {'type':31,'shape':1,'color':'orange','last_time':7},
+            {'type':41,'shape':2,'color':'purple','last_time':8},
+            {'type':12,'shape':1,'color':'pink','last_time':9},
         ]
         label=BlurredLabel(self,shapes)
         layout_center.addWidget(label)
@@ -174,10 +189,10 @@ class MainWindow(QMainWindow):
         f1=QFrame(self)
         f1.resize(800,800)
         layout_f1=QVBoxLayout(f1)
-
+        
         def settingwindow():
             if self.settingw is None:
-                self.settingw=SettingWindow(label)
+                self.settingw=SettingWindow(label,center,label,t1,t2,b2,b3)
             self.settingw.show()
         layout_top=QHBoxLayout()
         layout_f1.addLayout(layout_top)
@@ -208,11 +223,20 @@ class MainWindow(QMainWindow):
             t2.append('我:'+t1.toPlainText())
             self.thread=threading.Thread(target=answer)
             self.thread.start()
+        layout_content=QHBoxLayout()
         b2=QPushButton('确定')
         b2.setStyleSheet('background:rgba(0,0,0,0.5);border-radius:15px')
-        b2.setMinimumSize(400,30)
+        b2.setMinimumSize(380,30)
         b2.clicked.connect(answerthread)
-        layout_f1.addWidget(b2)
+        def clearcontent():
+            t2.clear()
+        b3=QPushButton('清空')
+        b3.clicked.connect(clearcontent)
+        b3.setStyleSheet('background:rgba(0,0,0,0.5);border-radius:15px')
+        b3.setMinimumSize(380,30)
+        layout_content.addWidget(b2)
+        layout_content.addWidget(b3)
+        layout_f1.addLayout(layout_content)
         layout_f1.addStretch(1)
 
         t2=QTextEdit()
@@ -222,9 +246,15 @@ class MainWindow(QMainWindow):
         layout_f1.addWidget(t2)
         
 class SettingWindow(QMainWindow):
-    def __init__(self,bg):
+    def __init__(self,bg,mwbg,mwlb,tq,ta,ba,bc):
         super().__init__()
         self.bg=bg
+        self.mwbg=mwbg
+        self.mwlb=mwlb
+        self.tq=tq
+        self.ta=ta
+        self.ba=ba
+        self.bc=bc
         self.initUI()
     def initUI(self):
         self.setWindowTitle('设置')   
@@ -233,11 +263,11 @@ class SettingWindow(QMainWindow):
         center=QWidget(self)
         layout_center=QVBoxLayout(center)
         shapes=[
-            {'type':11,'shape':1,'color':'#FF416C','last_time':6},
-            {'type':21,'shape':3,'color':'#12c2e9','last_time':5},
-            {'type':31,'shape':1,'color':'#c471ed','last_time':7},
-            {'type':41,'shape':2,'color':'#f64f59','last_time':8},
-            {'type':12,'shape':1,'color':'#7303c0','last_time':9},
+            {'type':11,'shape':1,'color':'green','last_time':6},
+            {'type':21,'shape':3,'color':'blue','last_time':5},
+            {'type':31,'shape':1,'color':'red','last_time':7},
+            {'type':41,'shape':2,'color':'purple','last_time':8},
+            {'type':12,'shape':1,'color':'pink','last_time':9},
         ]
         label=BlurredLabel(self,shapes)
         layout_center.addWidget(label)
@@ -259,23 +289,23 @@ class SettingWindow(QMainWindow):
 
         def blur_radius(num):
             try:
-                int(num)
-                blur_open(self.bg,0,int(num))
+                a=int(num)
+                blur_open(self.bg,0,int(a))
                 cb1.setChecked(False)
             except ValueError:
-                MessageBox('模糊程度应为整数型(int)')
+                MessageBox('模糊程度应为整型(int)')
 
         layout_blur=QHBoxLayout()
         l2=QLabel('模糊程度:')
         t1=QLineEdit()
         t1.setStyleSheet('background:rgba(255,255,255,0.5)')
         t1.setMaximumWidth(50)
-        def showtext():
-            QToolTip.showText(QCursor.pos(),'数字越大性能开销越大!')
+        def showtext(text):
+            QToolTip.showText(QCursor.pos(),text)
         b1=QPushButton()
         b1.setIcon(QIcon('git/GeminiGui/images/warm.png'))
         b1.setStyleSheet('background:rgba(0,0,0,0)')
-        b1.clicked.connect(showtext)
+        b1.clicked.connect(lambda:showtext('数字越大性能开销越大!'))
         b2=QPushButton()
         b2.setIcon(QIcon('git/GeminiGui/images/save.png'))
         b2.setStyleSheet('background:rgba(0,0,0,0)')
@@ -289,15 +319,138 @@ class SettingWindow(QMainWindow):
         l3=QLabel('界面设置')
         l3.setFont(QFont('微软雅黑',15))
         l3.setAlignment(Qt.AlignmentFlag.AlignHCenter)
-        layout_window=QHBoxLayout()
-        
+        layout_window=QVBoxLayout()
+
+        layout_window1=QHBoxLayout()
+        l4=QLabel('窗口背景色:')
+        def setwindowcolor():
+            color=GetColor().getcolor()
+            self.mwbg.setStyleSheet('background:'+color)
+            center.setStyleSheet('background:'+color)
+            b3.setStyleSheet(center.styleSheet())
+            self.mwlb.setStyleSheet('background:0,0,0,0')
+            label.setStyleSheet('background:0,0,0,0')
+        b3=QPushButton()
+        b3.clicked.connect(setwindowcolor)
+        b3.setMaximumSize(40,40)
+        layout_window1.addWidget(l4)
+        layout_window1.addWidget(b3)
+
+        layout_window2=QHBoxLayout()
+        l5=QLabel('主题模式:')
+        btg=QButtonGroup()
+        def settheme(color):
+            code_dict={'white':'0','default':'255'}
+            code=code_dict.get(color, '255')
+            self.mwbg.setStyleSheet('background:'+color)
+            center.setStyleSheet('background:'+color)
+            tq_style=f'background:rgba({code},{code},{code},0.5);border-radius:15px'
+            self.tq.setStyleSheet(tq_style)
+            self.ta.setStyleSheet(tq_style)
+            self.ba.setStyleSheet(tq_style)
+            self.bc.setStyleSheet(tq_style)
+            if color=='default':
+                self.mwbg.setStyleSheet('background:white')
+                center.setStyleSheet('background:white')
+                self.tq.setStyleSheet(tq_style)
+                self.ta.setStyleSheet(tq_style)
+                self.ba.setStyleSheet('background:rgba(0,0,0,0.5);border-radius:15px')
+                self.bc.setStyleSheet(self.ba.styleSheet())
+            b3.setStyleSheet(center.styleSheet())
+            self.mwlb.setStyleSheet('background:0,0,0,0')
+            label.setStyleSheet('background:0,0,0,0')
+        b4=QRadioButton('明亮')
+        b4.clicked.connect(lambda:settheme('white'))
+        b5=QRadioButton('暗黑')
+        b5.clicked.connect(lambda:settheme('black'))
+        b6=QRadioButton('默认')
+        b6.clicked.connect(lambda:settheme('default'))
+        btg.addButton(b4)
+        btg.addButton(b5)
+        btg.addButton(b6)
+        layout_window2.addWidget(l5)
+        layout_window2.addWidget(b6)
+        layout_window2.addWidget(b4)
+        layout_window2.addWidget(b5)
+        def setradius(te,num):
+            try:
+                a=int(num)
+                style=te.styleSheet()
+                patten=re.findall(find_radius,style)[0]
+                style=str(style).replace(patten,a)
+                te.setStyleSheet(style)
+            except ValueError:
+                MessageBox('圆角应为整形(int)')
+        layout_window3=QHBoxLayout()
+        l6=QLabel('输入框圆角:')
+        t2=QLineEdit()
+        t2.setMaximumWidth(50)
+        t2.setStyleSheet('background:rgba(255,255,255,0.5)')
+        b7=QPushButton()
+        b7.setIcon(QIcon('git/GeminiGui/images/save.png'))
+        b7.setStyleSheet('background:rgba(0,0,0,0)')
+        b7.clicked.connect(lambda:setradius(self.tq,t2.text()))
+        layout_window3.addWidget(l6)
+        layout_window3.addWidget(t2)
+        layout_window3.addStretch(1)
+        layout_window3.addWidget(b7)
+        layout_window4=QHBoxLayout()
+        l7=QLabel('回答框圆角:')
+        t3=QLineEdit()
+        t3.setMaximumWidth(50)
+        t3.setStyleSheet('background:rgba(255,255,255,0.5)')
+        b8=QPushButton()
+        b8.setIcon(QIcon('git/GeminiGui/images/save.png'))
+        b8.setStyleSheet('background:rgba(0,0,0,0)')
+        b8.clicked.connect(lambda:setradius(self.ta,t3.text()))
+        layout_window4.addWidget(l7)
+        layout_window4.addWidget(t3)
+        layout_window4.addStretch(1)
+        layout_window4.addWidget(b8)
+        layout_window.addLayout(layout_window1)
+        layout_window.addLayout(layout_window2)
+        layout_window.addLayout(layout_window3)
+        layout_window.addLayout(layout_window4)
+
+        l8=QLabel('动效设置')
+        l8.setFont(QFont('微软雅黑',15))
+        l8.setAlignment(Qt.AlignmentFlag.AlignHCenter)
+        layout_dynamic=QHBoxLayout()
+        l9=QLabel('运动速度:')
+        t4=QLineEdit()
+        t4.setMaximumWidth(50)
+        t4.setStyleSheet('background:rgba(255,255,255,0.5)')
+        def setspeed(num):
+            try:
+                a=int(num)
+                for i in ml:
+                    i.animationSpeed(a)
+            except ValueError:
+                MessageBox('运动速度应为整形(int)')
+
+        b9=QPushButton()
+        b9.setIcon(QIcon('git/GeminiGui/images/warm.png'))
+        b9.setStyleSheet('background:rgba(0,0,0,0)')
+        b9.clicked.connect(lambda:showtext('数字越大运动越慢,建议500-1000'))
+        b10=QPushButton()
+        b10.setIcon(QIcon('git/GeminiGui/images/save.png'))
+        b10.setStyleSheet('background:rgba(0,0,0,0)')
+        b10.clicked.connect(lambda:setspeed(t4.text()))
+        layout_dynamic.addWidget(l9)
+        layout_dynamic.addWidget(t4)
+        layout_dynamic.addWidget(b9)
+        layout_dynamic.addStretch(1)
+        layout_dynamic.addWidget(b10)
+
 
         layout_f1.addWidget(l1)
         layout_f1.addWidget(cb1)
         layout_f1.addLayout(layout_blur)
         layout_f1.addWidget(l3)
         layout_f1.addLayout(layout_window)
-        layout_f1.addStretch(3)
+        layout_f1.addWidget(l8)
+        layout_f1.addLayout(layout_dynamic)
+        layout_f1.addStretch(1)
 
 
            
@@ -306,5 +459,5 @@ def main():
     mainWindow=MainWindow()
     mainWindow.show()
     sys.exit(app.exec())
-if __name__ == '__main__':
+if __name__=='__main__':
     main()
