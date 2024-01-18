@@ -1,6 +1,7 @@
 import google.generativeai as genai
 import sys
 import re
+import json
 import threading
 from PyQt6.QtWidgets import *
 from PyQt6.QtGui import *
@@ -8,6 +9,19 @@ from PyQt6.QtCore import *
 
 find_radius=re.compile(r'border-radius:(.*?)px')
 ml=[]
+config=None
+
+class RwConfig:
+    def __init__(self):
+        with open('git/GeminiGui/config.json') as f:
+            global config
+            config=json.load(f)
+    def wconfig(zone,name,value):
+        with open() as f:
+            config[zone][name]=value
+            json.dump(config,f,indent=4)
+    
+rwconfig=RwConfig()
 
 class Gemini:
     genai.configure(api_key="AIzaSyCYbTJdgdMy5ETlRFPAcpQozMrnYLp5g0w",transport='rest')
@@ -55,7 +69,7 @@ class BlurredLabel(QLabel):
             last_time=item.get('last_time',3)
             shape=item.get('shape',1)
             ml.append(MoveLabel(self,type=type,color=color,last_time=last_time,shape=shape))
-        self.blur(0,100)
+        self.blur(config['blur']['open'],config['blur']['blur_radius'])
     def blur(self,state,num):
         if state==0:
             blur_effect=QGraphicsBlurEffect()
@@ -98,8 +112,8 @@ class MoveLabel(QLabel):
             self.end_rect=QRectF(parent.width()-self.side_width,(parent.height()-self.side_width)//2,self.side_width,self.side_width)
         self.animation=QPropertyAnimation(self,b'geometry')
         self.animation.finished.connect(self.toggleAnimation)
-        self.animationSpeed(500)
-        self.startAnimation(True,QEasingCurve.Type.InOutQuart)
+        self.animationSpeed(config['dynamic']['speed'])
+        self.startAnimation(eval(config['dynamic']['open']),eval(config['dynamic']['curve']))
     def paintEvent(self,event):
         super().paintEvent(event)
         painter=QPainter(self)
@@ -119,9 +133,7 @@ class MoveLabel(QLabel):
             p1=QPointF(self.width()/2,(self.height()-self.side_width*0.866)/2)  # 0.866 为 sqrt(3)/2,即等边三角形的高度
             p2=QPointF((self.width()-self.side_width)/2,(self.height()+self.side_width*0.866)/2)
             p3=QPointF((self.width()+self.side_width)/2,(self.height()+self.side_width*0.866)/2)
-
             triangle=QPolygonF([p1,p2,p3])
-
             painter.setBrush(QBrush(QColor(0,0,255)))  # 使用蓝色填充三角形
             painter.drawPolygon(triangle)
     def toggleAnimation(self):
@@ -176,7 +188,6 @@ class MainWindow(QMainWindow):
     def initUI(self):
         self.setWindowIcon(QIcon('git/GeminiGui/images/Gemini.png'))
         center=QWidget(self)
-        layout_center=QVBoxLayout(center)
         shapes=[
             {'type':11,'shape':1,'color':'red','last_time':6},
             {'type':21,'shape':3,'color':'blue','last_time':5},
@@ -185,18 +196,17 @@ class MainWindow(QMainWindow):
             {'type':12,'shape':1,'color':'pink','last_time':9},
         ]
         label=BlurredLabel(self,shapes)
-        layout_center.addWidget(label)
         self.setCentralWidget(center)
         self.setWindowTitle('Gemini AI')
+        center.setStyleSheet('background:'+config['window']['bg_color'])
 
         f1=QFrame(self)
         f1.resize(800,800)
         layout_f1=QVBoxLayout(f1)
         
         def settingwindow():
-            if self.settingw is None:
-                self.settingw=SettingWindow(label,center,label,t1,t2,b2,b3)
             self.settingw.show()
+
         layout_top=QHBoxLayout()
         layout_f1.addLayout(layout_top)
         b1=QPushButton()
@@ -247,11 +257,11 @@ class MainWindow(QMainWindow):
         t2.setMinimumSize(750,400)
         t2.setStyleSheet('background:rgba(255,255,255,0.5);border-radius:15px')
         layout_f1.addWidget(t2)
+        self.settingw=SettingWindow(center,label,t1,t2,b2,b3)
         
 class SettingWindow(QMainWindow):
-    def __init__(self,bg,mwbg,mwlb,tq,ta,ba,bc):
+    def __init__(self,mwbg,mwlb,tq,ta,ba,bc):
         super().__init__()
-        self.bg=bg
         self.mwbg=mwbg
         self.mwlb=mwlb
         self.tq=tq
@@ -264,7 +274,6 @@ class SettingWindow(QMainWindow):
         self.setGeometry(1100,100,400,400)
         self.setWindowIcon(QIcon('git/GeminiGui/images/setting.png'))
         center=QWidget(self)
-        layout_center=QVBoxLayout(center)
         shapes=[
             {'type':11,'shape':1,'color':'green','last_time':6},
             {'type':21,'shape':3,'color':'blue','last_time':5},
@@ -273,8 +282,9 @@ class SettingWindow(QMainWindow):
             {'type':12,'shape':1,'color':'pink','last_time':9},
         ]
         label=BlurredLabel(self,shapes)
-        layout_center.addWidget(label)
         self.setCentralWidget(center)
+        center.setStyleSheet('background:'+config['window']['bg_color'])
+        center.setStyleSheet('background:'+'blue')
 
         f1=QFrame(self)
         f1.resize(400,400)
@@ -288,7 +298,10 @@ class SettingWindow(QMainWindow):
             bg.blur(state,num)
             label.blur(state,num)
         cb1=QCheckBox('取消模糊')
-        cb1.stateChanged.connect(lambda state: blur_open(self.bg,state,100))
+        if config['blur']['open']==2:
+            cb1.setChecked(True)
+        else:cb1.setChecked(False)
+        cb1.stateChanged.connect(lambda state: blur_open(self.mwlb,state,100))
 
         def blur_radius(num):
             try:
@@ -301,6 +314,7 @@ class SettingWindow(QMainWindow):
         layout_blur=QHBoxLayout()
         l2=QLabel('模糊程度:')
         t1=QLineEdit()
+        t1.setText(str(config['blur']['blur_radius']))
         t1.setStyleSheet('background:rgba(255,255,255,0.5)')
         t1.setMaximumWidth(50)
         def showtext(text):
@@ -333,10 +347,11 @@ class SettingWindow(QMainWindow):
                 center.setStyleSheet('background:'+color)
                 b3.setStyleSheet(center.styleSheet())
                 self.mwlb.setStyleSheet('background:0,0,0,0')
-                label.setStyleSheet('background:0,0,0,0')
+
         b3=QPushButton()
-        b3.clicked.connect(setwindowcolor)
+        b3.setStyleSheet(center.styleSheet())
         b3.setMaximumSize(40,40)
+        b3.clicked.connect(setwindowcolor) 
         b13=QPushButton()
         b13.setIcon(QIcon('git/GeminiGui/images/save.png'))
         b13.setStyleSheet('background:rgba(0,0,0,0)')
@@ -349,31 +364,38 @@ class SettingWindow(QMainWindow):
         l5=QLabel('主题模式:')
         btg=QButtonGroup()
         def settheme(color):
-            code_dict={'white':'0','default':'255'}
-            code=code_dict.get(color, '255')
-            self.mwbg.setStyleSheet('background:'+color)
-            center.setStyleSheet('background:'+color)
-            tq_style=f'background:rgba({code},{code},{code},0.5);border-radius:15px'
-            self.tq.setStyleSheet(tq_style)
-            self.ta.setStyleSheet(tq_style)
-            self.ba.setStyleSheet(tq_style)
-            self.bc.setStyleSheet(tq_style)
             if color=='default':
                 self.mwbg.setStyleSheet('background:white')
                 center.setStyleSheet('background:white')
-                self.tq.setStyleSheet(tq_style)
-                self.ta.setStyleSheet(tq_style)
+                self.tq.setStyleSheet('background:rgba(255,255,255,0.5);border-radius:15px')
+                self.ta.setStyleSheet(self.tq.styleSheet())
                 self.ba.setStyleSheet('background:rgba(0,0,0,0.5);border-radius:15px')
                 self.bc.setStyleSheet(self.ba.styleSheet())
+            elif color=='white':
+                self.mwbg.setStyleSheet('background:white')
+                center.setStyleSheet('background:white')
+                self.tq.setStyleSheet('background:rgba(0,0,0,0.5);border-radius:15px')
+                self.ta.setStyleSheet(self.tq.styleSheet())
+                self.ba.setStyleSheet(self.tq.styleSheet())
+                self.bc.setStyleSheet(self.tq.styleSheet())
+            else:
+                self.mwbg.setStyleSheet('background:black')
+                center.setStyleSheet('background:black')
+                self.tq.setStyleSheet('background:rgba(255,255,255,0.5);border-radius:15px')
+                self.ta.setStyleSheet(self.tq.styleSheet())
+                self.ba.setStyleSheet(self.tq.styleSheet())
+                self.bc.setStyleSheet(self.tq.styleSheet())
             b3.setStyleSheet(center.styleSheet())
             self.mwlb.setStyleSheet('background:0,0,0,0')
-            label.setStyleSheet('background:0,0,0,0')
         b4=QRadioButton('明亮')
         b4.clicked.connect(lambda:settheme('white'))
         b5=QRadioButton('暗黑')
         b5.clicked.connect(lambda:settheme('black'))
         b6=QRadioButton('默认')
         b6.clicked.connect(lambda:settheme('default'))
+        if config['window']['theme']=='default':b6.click()
+        elif config['window']['theme']=='white':b4.click()
+        else:b5.click()
         btg.addButton(b4)
         btg.addButton(b5)
         btg.addButton(b6)
@@ -459,7 +481,6 @@ class SettingWindow(QMainWindow):
         layout_dynamic.addStretch(1)
         layout_dynamic.addWidget(b10)
 
-
         layout_dynamic1=QHBoxLayout()
         curve_dict={
             "线性": QEasingCurve.Type.Linear,
@@ -505,7 +526,6 @@ class SettingWindow(QMainWindow):
         layout_dynamic1.addStretch(1)
         layout_dynamic1.addWidget(b12)
 
-
         layout_f1.addWidget(l1)
         layout_f1.addWidget(cb1)
         layout_f1.addLayout(layout_blur)
@@ -516,7 +536,7 @@ class SettingWindow(QMainWindow):
         layout_f1.addLayout(layout_dynamic)
         layout_f1.addLayout(layout_dynamic1)
         layout_f1.addStretch(1)
-
+        
 
            
 def main():
