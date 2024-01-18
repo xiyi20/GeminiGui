@@ -99,7 +99,7 @@ class MoveLabel(QLabel):
         self.animation=QPropertyAnimation(self,b'geometry')
         self.animation.finished.connect(self.toggleAnimation)
         self.animationSpeed(500)
-        self.startAnimation()
+        self.startAnimation(True,QEasingCurve.Type.InOutQuart)
     def paintEvent(self,event):
         super().paintEvent(event)
         painter=QPainter(self)
@@ -133,11 +133,14 @@ class MoveLabel(QLabel):
         self.animation.start()
     def animationSpeed(self,speed):
         self.animation.setDuration(self.last_time*speed)
-    def startAnimation(self):
+    def startAnimation(self,open,dynamic):
         self.animation.setStartValue(self.start_rect)
         self.animation.setEndValue(self.end_rect)
-        self.animation.setEasingCurve(QEasingCurve.Type.InOutQuart)  # 设置缓动曲线
-        self.animation.start()
+        if open:
+            self.animation.setEasingCurve(dynamic) # 设置缓动曲线
+            self.animation.start()
+        else:
+            self.animation.stop()
 
 class MessageBox(QMessageBox):
     def __init__(self,msg):
@@ -325,16 +328,22 @@ class SettingWindow(QMainWindow):
         l4=QLabel('窗口背景色:')
         def setwindowcolor():
             color=GetColor().getcolor()
-            self.mwbg.setStyleSheet('background:'+color)
-            center.setStyleSheet('background:'+color)
-            b3.setStyleSheet(center.styleSheet())
-            self.mwlb.setStyleSheet('background:0,0,0,0')
-            label.setStyleSheet('background:0,0,0,0')
+            if color is not None:
+                self.mwbg.setStyleSheet('background:'+color)
+                center.setStyleSheet('background:'+color)
+                b3.setStyleSheet(center.styleSheet())
+                self.mwlb.setStyleSheet('background:0,0,0,0')
+                label.setStyleSheet('background:0,0,0,0')
         b3=QPushButton()
         b3.clicked.connect(setwindowcolor)
         b3.setMaximumSize(40,40)
+        b13=QPushButton()
+        b13.setIcon(QIcon('git/GeminiGui/images/save.png'))
+        b13.setStyleSheet('background:rgba(0,0,0,0)')
         layout_window1.addWidget(l4)
         layout_window1.addWidget(b3)
+        layout_window1.addStretch(1)
+        layout_window1.addWidget(b13)
 
         layout_window2=QHBoxLayout()
         l5=QLabel('主题模式:')
@@ -416,6 +425,15 @@ class SettingWindow(QMainWindow):
         l8.setFont(QFont('微软雅黑',15))
         l8.setAlignment(Qt.AlignmentFlag.AlignHCenter)
         layout_dynamic=QHBoxLayout()
+        def setdynamic(state,curve):
+            if state==2:
+                for i in ml:
+                    i.startAnimation(False,None)
+            else:
+                for i in ml:
+                    i.startAnimation(True,curve)
+        cb2=QCheckBox('关闭动效')
+        cb2.stateChanged.connect(lambda state:setdynamic(state,QEasingCurve.Type.InOutQuart))
         l9=QLabel('运动速度:')
         t4=QLineEdit()
         t4.setMaximumWidth(50)
@@ -427,7 +445,6 @@ class SettingWindow(QMainWindow):
                     i.animationSpeed(a)
             except ValueError:
                 MessageBox('运动速度应为整形(int)')
-
         b9=QPushButton()
         b9.setIcon(QIcon('git/GeminiGui/images/warm.png'))
         b9.setStyleSheet('background:rgba(0,0,0,0)')
@@ -443,13 +460,61 @@ class SettingWindow(QMainWindow):
         layout_dynamic.addWidget(b10)
 
 
+        layout_dynamic1=QHBoxLayout()
+        curve_dict={
+            "线性": QEasingCurve.Type.Linear,
+            "二次方进入": QEasingCurve.Type.InQuad,
+            "二次方退出": QEasingCurve.Type.OutQuad,
+            "二次方进入退出": QEasingCurve.Type.InOutQuad,
+            "三次方进入": QEasingCurve.Type.InCubic,
+            "三次方退出": QEasingCurve.Type.OutCubic,
+            "三次方进入退出": QEasingCurve.Type.InOutCubic,
+            "四次方进入": QEasingCurve.Type.InQuart,
+            "四次方退出": QEasingCurve.Type.OutQuart,
+            "四次方进入退出": QEasingCurve.Type.InOutQuart
+        }
+        curve_des=[
+            "线性曲线，即匀速运动",
+            "二次方曲线，开始缓慢，后期加速",
+            "二次方曲线，开始加速，后期减速",
+            "二次方曲线，开始缓慢，后期加速，再后期减速",
+            "三次方曲线，开始缓慢，后期加速",
+            "三次方曲线，开始加速，后期减速",
+            "三次方曲线，开始缓慢，后期加速，再后期减速",
+            "四次方曲线，开始缓慢，后期加速",
+            "四次方曲线，开始加速，后期减速",
+            "四次方曲线，开始缓慢，后期加速，再后期减速"
+        ]
+        curve_list=[]
+        for key in curve_dict.keys():
+            curve_list.append(key)
+        l10=QLabel('动画曲线:')
+        combobox=QComboBox()
+        combobox.addItems(curve_list)
+        b11=QPushButton()
+        b11.setIcon(QIcon('git/GeminiGui/images/tip.png'))
+        b11.setStyleSheet('background:rgba(0,0,0,0)')
+        b11.clicked.connect(lambda:showtext(curve_des[combobox.currentIndex()]))
+        b12=QPushButton()
+        b12.setIcon(QIcon('git/GeminiGui/images/save.png'))
+        b12.setStyleSheet('background:rgba(0,0,0,0)')
+        b12.clicked.connect(lambda:setdynamic(0,curve_dict[combobox.currentText()]))
+        layout_dynamic1.addWidget(l10)
+        layout_dynamic1.addWidget(combobox)
+        layout_dynamic1.addWidget(b11)
+        layout_dynamic1.addStretch(1)
+        layout_dynamic1.addWidget(b12)
+
+
         layout_f1.addWidget(l1)
         layout_f1.addWidget(cb1)
         layout_f1.addLayout(layout_blur)
         layout_f1.addWidget(l3)
         layout_f1.addLayout(layout_window)
         layout_f1.addWidget(l8)
+        layout_f1.addWidget(cb2)
         layout_f1.addLayout(layout_dynamic)
+        layout_f1.addLayout(layout_dynamic1)
         layout_f1.addStretch(1)
 
 
