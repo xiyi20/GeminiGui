@@ -16,8 +16,8 @@ class RwConfig:
         with open('git/GeminiGui/config.json') as f:
             global config
             config=json.load(f)
-    def wconfig(zone,name,value):
-        with open() as f:
+    def wconfig(self,zone,name,value):
+        with open('git/GeminiGui/config.json','w') as f:
             config[zone][name]=value
             json.dump(config,f,indent=4)
     
@@ -113,7 +113,7 @@ class MoveLabel(QLabel):
         self.animation=QPropertyAnimation(self,b'geometry')
         self.animation.finished.connect(self.toggleAnimation)
         self.animationSpeed(config['dynamic']['speed'])
-        self.startAnimation(eval(config['dynamic']['open']),eval(config['dynamic']['curve']))
+        self.startAnimation(config['dynamic']['open'],eval(config['dynamic']['curve']))
     def paintEvent(self,event):
         super().paintEvent(event)
         painter=QPainter(self)
@@ -148,7 +148,7 @@ class MoveLabel(QLabel):
     def startAnimation(self,open,dynamic):
         self.animation.setStartValue(self.start_rect)
         self.animation.setEndValue(self.end_rect)
-        if open:
+        if open==0:
             self.animation.setEasingCurve(dynamic) # 设置缓动曲线
             self.animation.start()
         else:
@@ -297,6 +297,8 @@ class SettingWindow(QMainWindow):
         def blur_open(bg,state,num):
             bg.blur(state,num)
             label.blur(state,num)
+            rwconfig.wconfig('blur','open',state)
+
         cb1=QCheckBox('取消模糊')
         if config['blur']['open']==2:
             cb1.setChecked(True)
@@ -306,8 +308,9 @@ class SettingWindow(QMainWindow):
         def blur_radius(num):
             try:
                 a=int(num)
-                blur_open(self.bg,0,int(a))
+                blur_open(self.mwlb,0,a)
                 cb1.setChecked(False)
+                rwconfig.wconfig('blur','blur_radius',a)
             except ValueError:
                 MessageBox('模糊程度应为整型(int)')
 
@@ -346,7 +349,7 @@ class SettingWindow(QMainWindow):
                 self.mwbg.setStyleSheet('background:'+color)
                 center.setStyleSheet('background:'+color)
                 b3.setStyleSheet(center.styleSheet())
-                self.mwlb.setStyleSheet('background:0,0,0,0')
+                rwconfig.wconfig('window','bg_color',color)
 
         b3=QPushButton()
         b3.setStyleSheet(center.styleSheet())
@@ -386,7 +389,7 @@ class SettingWindow(QMainWindow):
                 self.ba.setStyleSheet(self.tq.styleSheet())
                 self.bc.setStyleSheet(self.tq.styleSheet())
             b3.setStyleSheet(center.styleSheet())
-            self.mwlb.setStyleSheet('background:0,0,0,0')
+            rwconfig.wconfig('window','theme',color)
         b4=QRadioButton('明亮')
         b4.clicked.connect(lambda:settheme('white'))
         b5=QRadioButton('暗黑')
@@ -403,13 +406,14 @@ class SettingWindow(QMainWindow):
         layout_window2.addWidget(b6)
         layout_window2.addWidget(b4)
         layout_window2.addWidget(b5)
-        def setradius(te,num):
+        def setradius(code,te,num):
             try:
                 a=int(num)
                 style=te.styleSheet()
                 patten=re.findall(find_radius,style)[0]
-                style=str(style).replace(patten,a)
+                style=str(style).replace(patten,num)
                 te.setStyleSheet(style)
+                rwconfig.wconfig('window',code,a)
             except ValueError:
                 MessageBox('圆角应为整形(int)')
         layout_window3=QHBoxLayout()
@@ -417,10 +421,11 @@ class SettingWindow(QMainWindow):
         t2=QLineEdit()
         t2.setMaximumWidth(50)
         t2.setStyleSheet('background:rgba(255,255,255,0.5)')
+        t2.setText(str(config['window']['q_radius']))
         b7=QPushButton()
         b7.setIcon(QIcon('git/GeminiGui/images/save.png'))
         b7.setStyleSheet('background:rgba(0,0,0,0)')
-        b7.clicked.connect(lambda:setradius(self.tq,t2.text()))
+        b7.clicked.connect(lambda:setradius('q_radius',self.tq,t2.text()))
         layout_window3.addWidget(l6)
         layout_window3.addWidget(t2)
         layout_window3.addStretch(1)
@@ -430,10 +435,11 @@ class SettingWindow(QMainWindow):
         t3=QLineEdit()
         t3.setMaximumWidth(50)
         t3.setStyleSheet('background:rgba(255,255,255,0.5)')
+        t3.setText(str(config['window']['a_radius']))
         b8=QPushButton()
         b8.setIcon(QIcon('git/GeminiGui/images/save.png'))
         b8.setStyleSheet('background:rgba(0,0,0,0)')
-        b8.clicked.connect(lambda:setradius(self.ta,t3.text()))
+        b8.clicked.connect(lambda:setradius('a_radius',self.ta,t3.text()))
         layout_window4.addWidget(l7)
         layout_window4.addWidget(t3)
         layout_window4.addStretch(1)
@@ -450,21 +456,28 @@ class SettingWindow(QMainWindow):
         def setdynamic(state,curve):
             if state==2:
                 for i in ml:
-                    i.startAnimation(False,None)
+                    i.startAnimation(state,None)
             else:
                 for i in ml:
-                    i.startAnimation(True,curve)
+                    i.startAnimation(state,curve)
+                    rwconfig.wconfig('dynamic','curve','QEasingCurve.'+str(curve_dict[combobox.currentText()]))
+            rwconfig.wconfig('dynamic','open',state)
         cb2=QCheckBox('关闭动效')
-        cb2.stateChanged.connect(lambda state:setdynamic(state,QEasingCurve.Type.InOutQuart))
+        if config['dynamic']['open']==2:
+            cb2.setChecked(True)
+        else:cb2.setChecked(False)
+        cb2.stateChanged.connect(lambda state:setdynamic(state,eval(config['dynamic']['curve'])))
         l9=QLabel('运动速度:')
         t4=QLineEdit()
         t4.setMaximumWidth(50)
         t4.setStyleSheet('background:rgba(255,255,255,0.5)')
+        t4.setText(str(config['dynamic']['speed']))
         def setspeed(num):
             try:
                 a=int(num)
                 for i in ml:
                     i.animationSpeed(a)
+                rwconfig.wconfig('dynamic','speed',a)
             except ValueError:
                 MessageBox('运动速度应为整形(int)')
         b9=QPushButton()
@@ -506,12 +519,15 @@ class SettingWindow(QMainWindow):
             "四次方曲线，开始加速，后期减速",
             "四次方曲线，开始缓慢，后期加速，再后期减速"
         ]
-        curve_list=[]
-        for key in curve_dict.keys():
-            curve_list.append(key)
+        
         l10=QLabel('动画曲线:')
         combobox=QComboBox()
-        combobox.addItems(curve_list)
+
+        for key,value in curve_dict.items():
+            combobox.addItem(key)
+            if str(value)==config['dynamic']['curve'][13:]:
+                combobox.setCurrentText(key)
+
         b11=QPushButton()
         b11.setIcon(QIcon('git/GeminiGui/images/tip.png'))
         b11.setStyleSheet('background:rgba(0,0,0,0)')
@@ -537,8 +553,7 @@ class SettingWindow(QMainWindow):
         layout_f1.addLayout(layout_dynamic1)
         layout_f1.addStretch(1)
         
-
-           
+     
 def main():
     app=QApplication(sys.argv)
     mainWindow=MainWindow()
