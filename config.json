@@ -1,10 +1,10 @@
 {
     "blur": {
         "open": 0,
-        "blur_radius": 90
+        "blur_radius": 120
     },
     "window": {
-        "bg_color": "#ff55ff",
+        "bg_color": "#ffffff",
         "theme": "default",
         "q_radius": 15,
         "a_radius": 15
@@ -12,6 +12,6 @@
     "dynamic": {
         "open": 0,
         "speed": 500,
-        "curve": "QEasingCurve.Type.InOutCubic"
+        "curve": "QEasingCurve.Type.OutQuart"
     }
 }

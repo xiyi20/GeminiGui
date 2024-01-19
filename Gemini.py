@@ -1,61 +1,86 @@
-import google.generativeai as genai
-import sys
 import re
+import sys
 import json
 import threading
-from PyQt6.QtWidgets import *
 from PyQt6.QtGui import *
 from PyQt6.QtCore import *
+from PyQt6.QtWidgets import *
+import google.generativeai as genai
+
 
 find_radius=re.compile(r'border-radius:(.*?)px')
+find_text=re.compile(r'text: "(.*?)"')
 ml=[]
 config=None
 
 class RwConfig:
     def __init__(self):
-        with open('git/GeminiGui/config.json') as f:
-            global config
-            config=json.load(f)
+        try:
+            with open('git/GeminiGui/config.json') as f:
+                global config
+                config=json.load(f)
+        except FileNotFoundError:
+            MessageBox('配置文件不存在或路径错误!')
+        except json.decoder.JSONDecodeError:
+            MessageBox('配置文件不是有效的JSON格式!')
+        except PermissionError:
+            MessageBox('没有足够权限读取或写入配置文件!')
     def wconfig(self,zone,name,value):
-        with open('git/GeminiGui/config.json','w') as f:
-            config[zone][name]=value
-            json.dump(config,f,indent=4)
+        try:
+            with open('git/GeminiGui/config.json','w') as f:
+                config[zone][name]=value
+                json.dump(config,f,indent=4)
+        except PermissionError:
+            MessageBox('没有足够权限读取或写入配置文件!')
     
 rwconfig=RwConfig()
+blopen=config['blur']['open']
+blradius=config['blur']['blur_radius']
+
+bgcolor=config['window']['bg_color']
+bgtheme=config['window']['theme']
+qradius=config['window']['q_radius']
+aradius=config['window']['a_radius']
+
+dnopen=config['dynamic']['open']
+dnspeed=config['dynamic']['speed']
+dncurve=config['dynamic']['curve']
+
 
 class Gemini:
-    genai.configure(api_key="AIzaSyCYbTJdgdMy5ETlRFPAcpQozMrnYLp5g0w",transport='rest')
-    # Set up the model
-    generation_config={
-        "temperature": 0.9,
-        "top_p": 1,
-        "top_k": 1,
-        "max_output_tokens": 2048,
-    }
-    safety_settings=[
-        {
-            "category": "HARM_CATEGORY_HARASSMENT",
-            "threshold": "BLOCK_NONE"
-        },
-        {
-            "category": "HARM_CATEGORY_HATE_SPEECH",
-            "threshold": "BLOCK_NONE"
-        },
-        {
-            "category": "HARM_CATEGORY_SEXUALLY_EXPLICIT",
-            "threshold": "BLOCK_NONE"
-        },
-        {
-            "category": "HARM_CATEGORY_DANGEROUS_CONTENT",
-            "threshold": "BLOCK_NONE"
-        },
-    ]
-    model=genai.GenerativeModel(model_name="gemini-pro",
-                                generation_config=generation_config,
-                                safety_settings=safety_settings)
-    chat=model.start_chat(history=[])
+    def __init__(self):
+        genai.configure(api_key="AIzaSyCYbTJdgdMy5ETlRFPAcpQozMrnYLp5g0w",transport='rest')
+        # Set up the model
+        generation_config={
+            "temperature": 0.9,
+            "top_p": 1,
+            "top_k": 1,
+            "max_output_tokens": 2048,
+        }
+        safety_settings=[
+            {
+                "category": "HARM_CATEGORY_HARASSMENT",
+                "threshold": "BLOCK_NONE"
+            },
+            {
+                "category": "HARM_CATEGORY_HATE_SPEECH",
+                "threshold": "BLOCK_NONE"
+            },
+            {
+                "category": "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+                "threshold": "BLOCK_NONE"
+            },
+            {
+                "category": "HARM_CATEGORY_DANGEROUS_CONTENT",
+                "threshold": "BLOCK_NONE"
+            },
+        ]
+        model=genai.GenerativeModel(model_name="gemini-pro",
+                                    generation_config=generation_config,
+                                    safety_settings=safety_settings)
+        self.chat=model.start_chat()
     def get_content(self,question):
-        response=self.chat.send_message(question+'请用简体中文回答')
+        response=self.chat.send_message(question+'\n请用简体中文回答')
         return response.text
 
 class BlurredLabel(QLabel):
@@ -69,7 +94,7 @@ class BlurredLabel(QLabel):
             last_time=item.get('last_time',3)
             shape=item.get('shape',1)
             ml.append(MoveLabel(self,type=type,color=color,last_time=last_time,shape=shape))
-        self.blur(config['blur']['open'],config['blur']['blur_radius'])
+        self.blur(blopen,blradius)
     def blur(self,state,num):
         if state==0:
             blur_effect=QGraphicsBlurEffect()
@@ -112,8 +137,8 @@ class MoveLabel(QLabel):
             self.end_rect=QRectF(parent.width()-self.side_width,(parent.height()-self.side_width)//2,self.side_width,self.side_width)
         self.animation=QPropertyAnimation(self,b'geometry')
         self.animation.finished.connect(self.toggleAnimation)
-        self.animationSpeed(config['dynamic']['speed'])
-        self.startAnimation(config['dynamic']['open'],eval(config['dynamic']['curve']))
+        self.animationSpeed(dnspeed)
+        self.startAnimation(dnopen,eval(dncurve))
     def paintEvent(self,event):
         super().paintEvent(event)
         painter=QPainter(self)
@@ -174,13 +199,16 @@ class GetColor(QColorDialog):
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setGeometry(300,50,800,800)
+        self.setGeometry(400,50,800,800)
         self.settingw=None
+        self.historyw=None
         self.thread=None
         self.initUI()
     def closeEvent(self,event):
-        if self.settingw is not None:
-            self.settingw.close()
+        window=[self.settingw,self.historyw]
+        for i in window:
+            if i is not None:
+                i.close()
         if self.thread is not None:
             if self.thread.is_alive():
                 self.thread.join()
@@ -198,7 +226,6 @@ class MainWindow(QMainWindow):
         label=BlurredLabel(self,shapes)
         self.setCentralWidget(center)
         self.setWindowTitle('Gemini AI')
-        center.setStyleSheet('background:'+config['window']['bg_color'])
 
         f1=QFrame(self)
         f1.resize(800,800)
@@ -206,13 +233,19 @@ class MainWindow(QMainWindow):
         
         def settingwindow():
             self.settingw.show()
-
+        def showhistory():
+            self.historyw.show()
         layout_top=QHBoxLayout()
         layout_f1.addLayout(layout_top)
         b1=QPushButton()
         b1.clicked.connect(settingwindow)
         b1.setStyleSheet('background:rgba(255,255,255,0)')
         b1.setIcon(QIcon('git/GeminiGui/images/setting.png'))
+        b0=QPushButton()
+        b0.clicked.connect(showhistory)
+        b0.setStyleSheet('background:rgba(255,255,255,0)')
+        b0.setIcon(QIcon('git/GeminiGui/images/history.png'))
+        layout_top.addWidget(b0)
         layout_top.addStretch(1)
         layout_top.addWidget(b1)
 
@@ -224,28 +257,32 @@ class MainWindow(QMainWindow):
 
         t1=QTextEdit()
         t1.setMinimumSize(750,230)
-        t1.setStyleSheet('background:rgba(255,255,255,0.5);border-radius:15px')
+        
         layout_f1.addWidget(t1)
         layout_f1.addStretch(2)
 
+        question=t1.toPlainText()
         def answer():
-            question=t1.toPlainText()
             answer=Gemini().get_content(question)
-            t2.append('Gemini:\n'+answer+'\n')
+            answer_text='Gemini:\n'+answer+'\n'
+            t2.append(answer_text)
+            self.historyw.ta.append(answer_text)
         def answerthread():
-            t2.append('我:'+t1.toPlainText())
+            question_text='我:'+question+'\n请用简体中文回答'
             self.thread=threading.Thread(target=answer)
             self.thread.start()
+            t2.append(question_text)
+            self.historyw.ta.append(question_text)
         layout_content=QHBoxLayout()
         b2=QPushButton('确定')
-        b2.setStyleSheet('background:rgba(0,0,0,0.5);border-radius:15px')
+        b2.setStyleSheet('border-radius:15px')
         b2.setMinimumSize(380,30)
         b2.clicked.connect(answerthread)
         def clearcontent():
             t2.clear()
         b3=QPushButton('清空')
         b3.clicked.connect(clearcontent)
-        b3.setStyleSheet('background:rgba(0,0,0,0.5);border-radius:15px')
+        b3.setStyleSheet('border-radius:15px')
         b3.setMinimumSize(380,30)
         layout_content.addWidget(b2)
         layout_content.addWidget(b3)
@@ -255,15 +292,49 @@ class MainWindow(QMainWindow):
         t2=QTextEdit()
         t2.setReadOnly(True)
         t2.setMinimumSize(750,400)
-        t2.setStyleSheet('background:rgba(255,255,255,0.5);border-radius:15px')
         layout_f1.addWidget(t2)
-        self.settingw=SettingWindow(center,label,t1,t2,b2,b3)
-        
+        self.historyw=HistoryWindow()
+        self.settingw=SettingWindow(center,label,t1,t2,b2,b3,self.historyw.center,self.historyw.label)
+
+class HistoryWindow(QMainWindow):
+    def __init__(self):
+        super().__init__()
+        self.ta=None
+        self.center=None
+        self.label=None
+        self.initUI()
+    def initUI(self):
+        self.setWindowTitle('对话历史')   
+        self.setGeometry(0,100,400,400)
+        self.setWindowIcon(QIcon('git/GeminiGui/images/history.png'))
+        self.center=QWidget(self)
+        shapes=[
+            {'type':11,'shape':1,'color':'green','last_time':6},
+            {'type':21,'shape':3,'color':'blue','last_time':5},
+            {'type':31,'shape':1,'color':'red','last_time':7},
+            {'type':41,'shape':2,'color':'purple','last_time':8},
+            {'type':12,'shape':1,'color':'pink','last_time':9},
+        ]
+        self.label=BlurredLabel(self,shapes)
+        self.setCentralWidget(self.center)
+
+        f1=QFrame(self)
+        layout_f1=QVBoxLayout(f1)
+        f1.resize(400,400)
+        self.ta=QTextEdit()
+        self.ta.setMinimumSize(380,380)
+        self.ta.setStyleSheet('background:rgba(255,255,255,0.5);border-radius:15px')
+        self.ta.setReadOnly(True)
+        layout_f1.addWidget(self.ta)
+
+
 class SettingWindow(QMainWindow):
-    def __init__(self,mwbg,mwlb,tq,ta,ba,bc):
+    def __init__(self,mwbg,mwlb,tq,ta,ba,bc,htbg,htlb):
         super().__init__()
         self.mwbg=mwbg
         self.mwlb=mwlb
+        self.htbg=htbg
+        self.htlb=htlb
         self.tq=tq
         self.ta=ta
         self.ba=ba
@@ -271,7 +342,7 @@ class SettingWindow(QMainWindow):
         self.initUI()
     def initUI(self):
         self.setWindowTitle('设置')   
-        self.setGeometry(1100,100,400,400)
+        self.setGeometry(1200,100,400,400)
         self.setWindowIcon(QIcon('git/GeminiGui/images/setting.png'))
         center=QWidget(self)
         shapes=[
@@ -283,8 +354,6 @@ class SettingWindow(QMainWindow):
         ]
         label=BlurredLabel(self,shapes)
         self.setCentralWidget(center)
-        center.setStyleSheet('background:'+config['window']['bg_color'])
-        center.setStyleSheet('background:'+'blue')
 
         f1=QFrame(self)
         f1.resize(400,400)
@@ -294,21 +363,22 @@ class SettingWindow(QMainWindow):
         l1.setFont(QFont('微软雅黑',15))
         l1.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
-        def blur_open(bg,state,num):
-            bg.blur(state,num)
+        def blur_open(state,num):
+            self.mwlb.blur(state,num)
+            self.htlb.blur(state,num)
             label.blur(state,num)
             rwconfig.wconfig('blur','open',state)
 
         cb1=QCheckBox('取消模糊')
-        if config['blur']['open']==2:
+        if blopen==2:
             cb1.setChecked(True)
         else:cb1.setChecked(False)
-        cb1.stateChanged.connect(lambda state: blur_open(self.mwlb,state,100))
+        cb1.stateChanged.connect(lambda state: blur_open(state,blradius))
 
         def blur_radius(num):
             try:
                 a=int(num)
-                blur_open(self.mwlb,0,a)
+                blur_open(0,a)
                 cb1.setChecked(False)
                 rwconfig.wconfig('blur','blur_radius',a)
             except ValueError:
@@ -317,7 +387,7 @@ class SettingWindow(QMainWindow):
         layout_blur=QHBoxLayout()
         l2=QLabel('模糊程度:')
         t1=QLineEdit()
-        t1.setText(str(config['blur']['blur_radius']))
+        t1.setText(str(blradius))
         t1.setStyleSheet('background:rgba(255,255,255,0.5)')
         t1.setMaximumWidth(50)
         def showtext(text):
@@ -347,12 +417,12 @@ class SettingWindow(QMainWindow):
             color=GetColor().getcolor()
             if color is not None:
                 self.mwbg.setStyleSheet('background:'+color)
+                self.htbg.setStyleSheet('background:'+color)
                 center.setStyleSheet('background:'+color)
                 b3.setStyleSheet(center.styleSheet())
                 rwconfig.wconfig('window','bg_color',color)
 
         b3=QPushButton()
-        b3.setStyleSheet(center.styleSheet())
         b3.setMaximumSize(40,40)
         b3.clicked.connect(setwindowcolor) 
         b13=QPushButton()
@@ -370,24 +440,21 @@ class SettingWindow(QMainWindow):
             if color=='default':
                 self.mwbg.setStyleSheet('background:white')
                 center.setStyleSheet('background:white')
-                self.tq.setStyleSheet('background:rgba(255,255,255,0.5);border-radius:15px')
-                self.ta.setStyleSheet(self.tq.styleSheet())
+                self.tq.setStyleSheet(f'background:rgba(255,255,255,0.5);border-radius:{qradius}px')
                 self.ba.setStyleSheet('background:rgba(0,0,0,0.5);border-radius:15px')
-                self.bc.setStyleSheet(self.ba.styleSheet())
-            elif color=='white':
-                self.mwbg.setStyleSheet('background:white')
-                center.setStyleSheet('background:white')
-                self.tq.setStyleSheet('background:rgba(0,0,0,0.5);border-radius:15px')
-                self.ta.setStyleSheet(self.tq.styleSheet())
-                self.ba.setStyleSheet(self.tq.styleSheet())
-                self.bc.setStyleSheet(self.tq.styleSheet())
             else:
-                self.mwbg.setStyleSheet('background:black')
-                center.setStyleSheet('background:black')
-                self.tq.setStyleSheet('background:rgba(255,255,255,0.5);border-radius:15px')
-                self.ta.setStyleSheet(self.tq.styleSheet())
-                self.ba.setStyleSheet(self.tq.styleSheet())
-                self.bc.setStyleSheet(self.tq.styleSheet())
+                if color=='white':
+                    self.mwbg.setStyleSheet('background:white')
+                    center.setStyleSheet('background:white')
+                    self.tq.setStyleSheet(f'background:rgba(0,0,0,0.5);border-radius:{qradius}px')
+                    self.ba.setStyleSheet('background:rgba(0,0,0,0.5);border-radius:15px')
+                else:
+                    self.mwbg.setStyleSheet('background:black')
+                    center.setStyleSheet('background:black')
+                    self.tq.setStyleSheet(f'background:rgba(255,255,255,0.5);border-radius:{qradius}px')
+                    self.ba.setStyleSheet('background:rgba(255,255,255,0.5);border-radius:15px')
+            self.ta.setStyleSheet(self.tq.styleSheet())
+            self.bc.setStyleSheet(self.ba.styleSheet())
             b3.setStyleSheet(center.styleSheet())
             rwconfig.wconfig('window','theme',color)
         b4=QRadioButton('明亮')
@@ -396,8 +463,8 @@ class SettingWindow(QMainWindow):
         b5.clicked.connect(lambda:settheme('black'))
         b6=QRadioButton('默认')
         b6.clicked.connect(lambda:settheme('default'))
-        if config['window']['theme']=='default':b6.click()
-        elif config['window']['theme']=='white':b4.click()
+        if bgtheme=='default':b6.click()
+        elif bgtheme=='white':b4.click()
         else:b5.click()
         btg.addButton(b4)
         btg.addButton(b5)
@@ -421,7 +488,7 @@ class SettingWindow(QMainWindow):
         t2=QLineEdit()
         t2.setMaximumWidth(50)
         t2.setStyleSheet('background:rgba(255,255,255,0.5)')
-        t2.setText(str(config['window']['q_radius']))
+        t2.setText(str(qradius))
         b7=QPushButton()
         b7.setIcon(QIcon('git/GeminiGui/images/save.png'))
         b7.setStyleSheet('background:rgba(0,0,0,0)')
@@ -435,7 +502,7 @@ class SettingWindow(QMainWindow):
         t3=QLineEdit()
         t3.setMaximumWidth(50)
         t3.setStyleSheet('background:rgba(255,255,255,0.5)')
-        t3.setText(str(config['window']['a_radius']))
+        t3.setText(str(aradius))
         b8=QPushButton()
         b8.setIcon(QIcon('git/GeminiGui/images/save.png'))
         b8.setStyleSheet('background:rgba(0,0,0,0)')
@@ -463,15 +530,15 @@ class SettingWindow(QMainWindow):
                     rwconfig.wconfig('dynamic','curve','QEasingCurve.'+str(curve_dict[combobox.currentText()]))
             rwconfig.wconfig('dynamic','open',state)
         cb2=QCheckBox('关闭动效')
-        if config['dynamic']['open']==2:
+        if dnopen==2:
             cb2.setChecked(True)
         else:cb2.setChecked(False)
-        cb2.stateChanged.connect(lambda state:setdynamic(state,eval(config['dynamic']['curve'])))
+        cb2.stateChanged.connect(lambda state:setdynamic(state,eval(dncurve)))
         l9=QLabel('运动速度:')
         t4=QLineEdit()
         t4.setMaximumWidth(50)
         t4.setStyleSheet('background:rgba(255,255,255,0.5)')
-        t4.setText(str(config['dynamic']['speed']))
+        t4.setText(str(dnspeed))
         def setspeed(num):
             try:
                 a=int(num)
@@ -525,7 +592,7 @@ class SettingWindow(QMainWindow):
 
         for key,value in curve_dict.items():
             combobox.addItem(key)
-            if str(value)==config['dynamic']['curve'][13:]:
+            if str(value)==dncurve[13:]:
                 combobox.setCurrentText(key)
 
         b11=QPushButton()
@@ -552,6 +619,10 @@ class SettingWindow(QMainWindow):
         layout_f1.addLayout(layout_dynamic)
         layout_f1.addLayout(layout_dynamic1)
         layout_f1.addStretch(1)
+
+        self.mwbg.setStyleSheet('background:'+bgcolor)
+        center.setStyleSheet('background:'+bgcolor)
+        b3.setStyleSheet(center.styleSheet())
         
      
 def main():
