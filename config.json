@@ -1,7 +1,7 @@
 {
     "blur": {
         "open": 0,
-        "blur_radius": 150
+        "blur_radius": 100
     },
     "window": {
         "bg_color": "#ffffff",
