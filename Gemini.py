@@ -2,6 +2,7 @@ import re
 import sys
 import json
 import threading
+import random
 from PyQt6.QtGui import *
 from PyQt6.QtCore import *
 from PyQt6.QtWidgets import *
@@ -12,6 +13,11 @@ find_radius=re.compile(r'border-radius:(.*?)px')
 find_text=re.compile(r'text: "(.*?)"')
 ml=[]
 config=None
+
+def getcolor():
+    rgb=(random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
+    color="#"+"".join(["{:02x}".format(value) for value in rgb])
+    return color
 
 class RwConfig:
     def __init__(self):
@@ -32,7 +38,7 @@ class RwConfig:
                 json.dump(config,f,indent=4)
         except PermissionError:
             MessageBox('没有足够权限读取或写入配置文件!')
-    
+
 rwconfig=RwConfig()
 blopen=config['blur']['open']
 blradius=config['blur']['blur_radius']
@@ -46,41 +52,39 @@ dnopen=config['dynamic']['open']
 dnspeed=config['dynamic']['speed']
 dncurve=config['dynamic']['curve']
 
-
 class Gemini:
-    def __init__(self):
-        genai.configure(api_key="AIzaSyCYbTJdgdMy5ETlRFPAcpQozMrnYLp5g0w",transport='rest')
-        # Set up the model
-        generation_config={
-            "temperature": 0.9,
-            "top_p": 1,
-            "top_k": 1,
-            "max_output_tokens": 2048,
-        }
-        safety_settings=[
-            {
-                "category": "HARM_CATEGORY_HARASSMENT",
-                "threshold": "BLOCK_NONE"
-            },
-            {
-                "category": "HARM_CATEGORY_HATE_SPEECH",
-                "threshold": "BLOCK_NONE"
-            },
-            {
-                "category": "HARM_CATEGORY_SEXUALLY_EXPLICIT",
-                "threshold": "BLOCK_NONE"
-            },
-            {
-                "category": "HARM_CATEGORY_DANGEROUS_CONTENT",
-                "threshold": "BLOCK_NONE"
-            },
-        ]
-        model=genai.GenerativeModel(model_name="gemini-pro",
-                                    generation_config=generation_config,
-                                    safety_settings=safety_settings)
-        self.chat=model.start_chat()
+    genai.configure(api_key="AIzaSyCYbTJdgdMy5ETlRFPAcpQozMrnYLp5g0w",transport='rest')
+    #Set up the model
+    generation_config={
+        "temperature": 0.9,
+        "top_p": 1,
+        "top_k": 1,
+        "max_output_tokens": 2048,
+    }
+    safety_settings=[
+        {
+            "category": "HARM_CATEGORY_HARASSMENT",
+            "threshold": "BLOCK_NONE"
+        },
+        {
+            "category": "HARM_CATEGORY_HATE_SPEECH",
+            "threshold": "BLOCK_NONE"
+        },
+        {
+            "category": "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+            "threshold": "BLOCK_NONE"
+        },
+        {
+            "category": "HARM_CATEGORY_DANGEROUS_CONTENT",
+            "threshold": "BLOCK_NONE"
+        },
+    ]
+    model=genai.GenerativeModel(model_name="gemini-pro",
+                                generation_config=generation_config,
+                                safety_settings=safety_settings)
+    chat=model.start_chat(history=[])
     def get_content(self,question):
-        response=self.chat.send_message(question+'\n请用简体中文回答')
+        response=self.chat.send_message(question)
         return response.text
 
 class BlurredLabel(QLabel):
@@ -104,9 +108,9 @@ class BlurredLabel(QLabel):
             self.setGraphicsEffect(None)
 
 class MoveLabel(QLabel):
-    def __init__(self,parent=None,type=11,shape=0,color='blue',last_time=5):
+    def __init__(self,parent,type,shape,color,last_time):
         super().__init__(parent)
-        self.side_width=min(parent.width(),parent.height()) // 2  # 设置半径为父类宽高最小值的一半
+        self.side_width=min(parent.width(),parent.height()) // 2  #设置半径为父类宽高最小值的一半
         self.setGeometry(0,0,self.side_width,self.side_width)
         self.shape=shape
         self.last_time=last_time
@@ -144,25 +148,25 @@ class MoveLabel(QLabel):
         painter=QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         if self.shape==1:
-            # 计算圆的位置
+            #计算圆的位置
             rect=self.rect().adjusted(1,1,-1,-1)
-            # 设置刷子
-            brush=QBrush(QColor(self.color))  # 刷子颜色为半透明红色
+            #设置刷子
+            brush=QBrush(QColor(self.color))  #设置刷子颜色
             painter.setBrush(brush)
-            # 绘制圆
+            #绘制圆
             painter.drawEllipse(rect)
         elif self.shape==2:
-            painter.fillRect(0,0,self.side_width,self.side_width,QColor(self.color))  # 使用红色填充正方形
+            painter.fillRect(0,0,self.side_width,self.side_width,QColor(self.color))  #设置刷子颜色
         elif self.shape==3:
-            # 计算三角形的顶点坐标
-            p1=QPointF(self.width()/2,(self.height()-self.side_width*0.866)/2)  # 0.866 为 sqrt(3)/2,即等边三角形的高度
+            #计算三角形的顶点坐标
+            p1=QPointF(self.width()/2,(self.height()-self.side_width*0.866)/2)  #设置刷子颜色
             p2=QPointF((self.width()-self.side_width)/2,(self.height()+self.side_width*0.866)/2)
             p3=QPointF((self.width()+self.side_width)/2,(self.height()+self.side_width*0.866)/2)
             triangle=QPolygonF([p1,p2,p3])
-            painter.setBrush(QBrush(QColor(0,0,255)))  # 使用蓝色填充三角形
+            painter.setBrush(QBrush(QColor(self.color)))  #设置刷子颜色
             painter.drawPolygon(triangle)
     def toggleAnimation(self):
-        # 切换动画的起始值和结束值
+        #切换动画的起始值和结束值
         a,b=self.animation.startValue(),self.animation.endValue()
         a,b=b,a
         self.animation.setStartValue(a)
@@ -174,7 +178,7 @@ class MoveLabel(QLabel):
         self.animation.setStartValue(self.start_rect)
         self.animation.setEndValue(self.end_rect)
         if open==0:
-            self.animation.setEasingCurve(dynamic) # 设置缓动曲线
+            self.animation.setEasingCurve(dynamic) #设置缓动曲线
             self.animation.start()
         else:
             self.animation.stop()
@@ -217,11 +221,11 @@ class MainWindow(QMainWindow):
         self.setWindowIcon(QIcon('git/GeminiGui/images/Gemini.png'))
         center=QWidget(self)
         shapes=[
-            {'type':11,'shape':1,'color':'red','last_time':6},
-            {'type':21,'shape':3,'color':'blue','last_time':5},
-            {'type':31,'shape':1,'color':'orange','last_time':7},
-            {'type':41,'shape':2,'color':'purple','last_time':8},
-            {'type':12,'shape':1,'color':'pink','last_time':9},
+            {'type':21,'shape':1,'color':getcolor(),'last_time':6},
+            {'type':22,'shape':1,'color':getcolor(),'last_time':5},
+            {'type':31,'shape':2,'color':getcolor(),'last_time':7},
+            {'type':41,'shape':3,'color':getcolor(),'last_time':8},
+            {'type':12,'shape':3,'color':getcolor(),'last_time':9},
         ]
         label=BlurredLabel(self,shapes)
         self.setCentralWidget(center)
@@ -249,7 +253,7 @@ class MainWindow(QMainWindow):
         layout_top.addStretch(1)
         layout_top.addWidget(b1)
 
-        l1=QLabel('Geimini Ai')
+        l1=QLabel('Geimini AI')
         l1.setFont(QFont('微软雅黑',30))
         l1.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout_f1.addWidget(l1)
@@ -261,20 +265,20 @@ class MainWindow(QMainWindow):
         layout_f1.addWidget(t1)
         layout_f1.addStretch(2)
 
-        question=t1.toPlainText()
         def answer():
+            question=t1.toPlainText()
             answer=Gemini().get_content(question)
             answer_text='Gemini:\n'+answer+'\n'
             t2.append(answer_text)
             self.historyw.ta.append(answer_text)
         def answerthread():
-            question_text='我:'+question+'\n请用简体中文回答'
             self.thread=threading.Thread(target=answer)
             self.thread.start()
+            question_text='我:\n'+t1.toPlainText()
             t2.append(question_text)
             self.historyw.ta.append(question_text)
         layout_content=QHBoxLayout()
-        b2=QPushButton('确定')
+        b2=QPushButton('发送')
         b2.setStyleSheet('border-radius:15px')
         b2.setMinimumSize(380,30)
         b2.clicked.connect(answerthread)
@@ -309,11 +313,11 @@ class HistoryWindow(QMainWindow):
         self.setWindowIcon(QIcon('git/GeminiGui/images/history.png'))
         self.center=QWidget(self)
         shapes=[
-            {'type':11,'shape':1,'color':'green','last_time':6},
-            {'type':21,'shape':3,'color':'blue','last_time':5},
-            {'type':31,'shape':1,'color':'red','last_time':7},
-            {'type':41,'shape':2,'color':'purple','last_time':8},
-            {'type':12,'shape':1,'color':'pink','last_time':9},
+            {'type':11,'shape':1,'color':getcolor(),'last_time':6},
+            {'type':21,'shape':3,'color':getcolor(),'last_time':5},
+            {'type':31,'shape':1,'color':getcolor(),'last_time':7},
+            {'type':41,'shape':2,'color':getcolor(),'last_time':8},
+            {'type':12,'shape':1,'color':getcolor(),'last_time':9},
         ]
         self.label=BlurredLabel(self,shapes)
         self.setCentralWidget(self.center)
@@ -346,11 +350,11 @@ class SettingWindow(QMainWindow):
         self.setWindowIcon(QIcon('git/GeminiGui/images/setting.png'))
         center=QWidget(self)
         shapes=[
-            {'type':11,'shape':1,'color':'green','last_time':6},
-            {'type':21,'shape':3,'color':'blue','last_time':5},
-            {'type':31,'shape':1,'color':'red','last_time':7},
-            {'type':41,'shape':2,'color':'purple','last_time':8},
-            {'type':12,'shape':1,'color':'pink','last_time':9},
+            {'type':11,'shape':1,'color':getcolor(),'last_time':6},
+            {'type':21,'shape':3,'color':getcolor(),'last_time':5},
+            {'type':31,'shape':1,'color':getcolor(),'last_time':7},
+            {'type':41,'shape':2,'color':getcolor(),'last_time':8},
+            {'type':12,'shape':1,'color':getcolor(),'last_time':9},
         ]
         label=BlurredLabel(self,shapes)
         self.setCentralWidget(center)
