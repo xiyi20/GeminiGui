@@ -232,7 +232,7 @@ class MainWindow(QMainWindow):
                 self.thread.join()
         event.accept()
     def initUI(self):
-        self.setWindowIcon(QIcon('images/Gemini.png'))
+        self.setWindowIcon(QIcon('images/Gemini.ico'))
         center=QWidget(self)
         shapes=[
             {'type':21,'shape':1,'color':getcolor(),'last_time':6},
