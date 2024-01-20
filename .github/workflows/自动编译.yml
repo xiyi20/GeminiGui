@@ -16,6 +16,9 @@ jobs:
   pyinstaller-build:
     runs-on: windows-latest
     steps:
+      - name: Checkout Repository
+          uses: actions/checkout@v4
+
       - name: Set up Python
         uses: actions/setup-python@v2
         with:
@@ -26,11 +29,16 @@ jobs:
           python -m pip install --upgrade pip
           pip install google-generativeai
           pip install pyqt6
-          
+
       - name: Create Executable
-        uses: sayyid5416/pyinstaller@v1
+        run: |
+          pyinstaller --onefile --windowed --icon 'images\Gemini.png' Gemini.py 
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
         with:
-          python_ver: '3.12'
-          spec: 'Gemini.py'
-          upload_exe_with_name: 'Gemini'
-          options: '--onefile --name "Gemini" --windowed'
+          name: Gemini-Artifacts
+          path: |
+            images/
+            config.json
+            dist/Gemini.exe
