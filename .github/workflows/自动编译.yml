@@ -27,7 +27,7 @@ jobs:
 
       - name: Create Executable
         run: |
-          pyinstaller --onefile --windowed --icon 'images\Gemini.png' Gemini.py 
+          pyinstaller --onefile --windowed --icon 'images\Gemini.ico' Gemini.py 
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
