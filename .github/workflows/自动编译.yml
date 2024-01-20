@@ -5,6 +5,9 @@ name: 自动编译exe
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - main
 
 jobs:
   pyinstaller-build:
@@ -27,7 +30,11 @@ jobs:
 
       - name: Create Executable
         run: |
-          pyinstaller --onefile --windowed --icon 'images\Gemini.ico' Gemini.py 
+          pyinstaller --onefile --windowed --icon 'images\Gemini.ico' Gemini.py
+
+      - name: Move Executable
+        run: |
+          move dist\Gemini.exe Gemini.exe
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
@@ -36,4 +43,4 @@ jobs:
           path: |
             images/
             config.json
-            dist/Gemini.exe
+            Gemini.exe
