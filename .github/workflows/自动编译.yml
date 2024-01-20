@@ -5,6 +5,9 @@ name: 自动编译exe
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - main
 
 permissions:
   contents: read

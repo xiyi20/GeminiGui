@@ -22,7 +22,7 @@ def getcolor():
 class RwConfig:
     def __init__(self):
         try:
-            with open('git/GeminiGui/config.json') as f:
+            with open('config.json') as f:
                 global config
                 config=json.load(f)
         except FileNotFoundError:
@@ -33,7 +33,7 @@ class RwConfig:
             MessageBox('没有足够权限读取或写入配置文件!')
     def wconfig(self,zone,name,value):
         try:
-            with open('git/GeminiGui/config.json','w') as f:
+            with open('config.json','w') as f:
                 config[zone][name]=value
                 json.dump(config,f,indent=4)
         except PermissionError:
@@ -57,7 +57,7 @@ class MessageBox(QObject):
     @pyqtSlot(str)
     def show(self,msg):
         messagebox=QMessageBox()
-        messagebox.setWindowIcon(QIcon('git/GeminiGui/images/warm.png'))
+        messagebox.setWindowIcon(QIcon('images/warm.png'))
         messagebox.setIcon(QMessageBox.Icon.Warning)
         messagebox.setWindowTitle('警告')
         messagebox.setText(msg)
@@ -232,7 +232,7 @@ class MainWindow(QMainWindow):
                 self.thread.join()
         event.accept()
     def initUI(self):
-        self.setWindowIcon(QIcon('git/GeminiGui/images/Gemini.png'))
+        self.setWindowIcon(QIcon('images/Gemini.png'))
         center=QWidget(self)
         shapes=[
             {'type':21,'shape':1,'color':getcolor(),'last_time':6},
@@ -257,12 +257,12 @@ class MainWindow(QMainWindow):
         layout_f1.addLayout(layout_top)
         b1=QPushButton()
         b1.clicked.connect(settingwindow)
-        b1.setIcon(QIcon('git/GeminiGui/images/setting.png'))
+        b1.setIcon(QIcon('images/setting.png'))
         b0=QPushButton()
         b0.clicked.connect(showhistory)
         for i in b0,b1:
             i.setStyleSheet('background:rgba(255,255,255,0)')
-        b0.setIcon(QIcon('git/GeminiGui/images/history.png'))
+        b0.setIcon(QIcon('images/history.png'))
         layout_top.addWidget(b0)
         layout_top.addStretch(1)
         layout_top.addWidget(b1)
@@ -327,7 +327,7 @@ class HistoryWindow(QMainWindow):
     def initUI(self):
         self.setWindowTitle('对话历史')   
         self.setGeometry(0,100,400,400)
-        self.setWindowIcon(QIcon('git/GeminiGui/images/history.png'))
+        self.setWindowIcon(QIcon('images/history.png'))
         self.center=QWidget(self)
         shapes=[
             {'type':11,'shape':1,'color':getcolor(),'last_time':6},
@@ -363,7 +363,7 @@ class SettingWindow(QMainWindow):
     def initUI(self):
         self.setWindowTitle('设置')   
         self.setGeometry(1200,100,400,400)
-        self.setWindowIcon(QIcon('git/GeminiGui/images/setting.png'))
+        self.setWindowIcon(QIcon('images/setting.png'))
         center=QWidget(self)
         shapes=[
             {'type':11,'shape':1,'color':getcolor(),'last_time':6},
@@ -412,10 +412,10 @@ class SettingWindow(QMainWindow):
         def showtext(text):
             QToolTip.showText(QCursor.pos(),text)
         b1=QPushButton()
-        b1.setIcon(QIcon('git/GeminiGui/images/warm.png'))
+        b1.setIcon(QIcon('images/warm.png'))
         b1.clicked.connect(lambda:showtext('数字越大性能开销越大!'))
         b2=QPushButton()
-        b2.setIcon(QIcon('git/GeminiGui/images/save.png'))
+        b2.setIcon(QIcon('images/save.png'))
         b2.clicked.connect(lambda: blur_radius(t1.text()))
         qt=[l2,t1,b1,0,b2]
         for i in qt:
@@ -442,7 +442,7 @@ class SettingWindow(QMainWindow):
         b3.setMaximumSize(40,40)
         b3.clicked.connect(setwindowcolor) 
         b13=QPushButton()
-        b13.setIcon(QIcon('git/GeminiGui/images/save.png'))
+        b13.setIcon(QIcon('images/save.png'))
         qt=[l4,b3,0,b13]
         for i in qt:
             if i==0:layout_window1.addStretch(1)
@@ -504,7 +504,7 @@ class SettingWindow(QMainWindow):
         t2.setMaximumWidth(50)
         t2.setText(str(qradius))
         b7=QPushButton()
-        b7.setIcon(QIcon('git/GeminiGui/images/save.png'))
+        b7.setIcon(QIcon('images/save.png'))
         b7.clicked.connect(lambda:setradius('q_radius',self.tq,t2.text()))
         qt=[l6,t2,0,b7]
         for i in qt:
@@ -517,7 +517,7 @@ class SettingWindow(QMainWindow):
         t3.setMaximumWidth(50)
         t3.setText(str(aradius))
         b8=QPushButton()
-        b8.setIcon(QIcon('git/GeminiGui/images/save.png'))
+        b8.setIcon(QIcon('images/save.png'))
         b8.clicked.connect(lambda:setradius('a_radius',self.ta,t3.text()))
         qt=[l7,t3,0,b8]
         for i in qt:
@@ -559,10 +559,10 @@ class SettingWindow(QMainWindow):
             except ValueError:
                 messagebox.show('运动速度应为整形(int)')
         b9=QPushButton()
-        b9.setIcon(QIcon('git/GeminiGui/images/warm.png'))
+        b9.setIcon(QIcon('images/warm.png'))
         b9.clicked.connect(lambda:showtext('数字越大运动越慢,建议500-1000'))
         b10=QPushButton()
-        b10.setIcon(QIcon('git/GeminiGui/images/save.png'))
+        b10.setIcon(QIcon('images/save.png'))
         b10.clicked.connect(lambda:setspeed(t4.text()))
 
         for i in t1,t2,t3,t4:
@@ -608,10 +608,10 @@ class SettingWindow(QMainWindow):
                 combobox.setCurrentText(key)
 
         b11=QPushButton()
-        b11.setIcon(QIcon('git/GeminiGui/images/tip.png'))
+        b11.setIcon(QIcon('images/tip.png'))
         b11.clicked.connect(lambda:showtext(curve_des[combobox.currentIndex()]))
         b12=QPushButton()
-        b12.setIcon(QIcon('git/GeminiGui/images/save.png'))
+        b12.setIcon(QIcon('images/save.png'))
         b12.clicked.connect(lambda:setdynamic(0,curve_dict[combobox.currentText()]))
 
         for i in b1,b2,b7,b8,b9,b10,b11,b12,b13:
