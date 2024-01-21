@@ -1,5 +1,5 @@
 {
-    "version":1.20,
-    "desc":"完善更新逻辑,增加重定向更新地址",
-    "url":"https://github.com/xiyi20/GeminiGui/actions/runs/7600279231/artifacts/1183768256"
+    "version":1.30,
+    "desc":"完善检查更新功能:使用多线程完成避免主界面堵塞,设置增加手动检查更新",
+    "url":"https://github.com/xiyi20/GeminiGui/actions/runs/7602046062/artifacts/1183995931"
 }
