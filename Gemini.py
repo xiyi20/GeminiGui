@@ -1,8 +1,9 @@
 import re
 import sys
 import json
-import threading
 import random
+import markdown
+import threading
 from PyQt6.QtGui import *
 from PyQt6.QtCore import *
 from PyQt6.QtWidgets import *
@@ -98,10 +99,12 @@ class Gemini:
                                            safety_settings=safety_settings)
         self.chat=self.model.start_chat(history=[])
 
-    def get_content(self,question):
+    def get_content(self,code,question):
         try:
-            response=self.chat.send_message(question)
-            return response.text
+            response=self.chat.send_message(question).text
+            if code==0:
+                response=markdown.markdown(response)
+            return response
         except Exception as e:
             return f'{type(e).__name__}:{e}'
             # messagebox.messageSignal.connect(messagebox.show)
@@ -212,6 +215,8 @@ class GetColor(QColorDialog):
             return self.color.name()
 
 class MainWindow(QMainWindow):
+    answersignal=pyqtSignal(str)
+    clearsignal=pyqtSignal(str)
     def __init__(self):
         super().__init__()
         self.setGeometry(400,50,800,800)
@@ -219,8 +224,9 @@ class MainWindow(QMainWindow):
         self.historyw=None
         self.thread=None
         self.state=None
-        self.question=None
+        self.code=None
         self.gemini=Gemini()
+        self.question=None
         self.initUI()
     def closeEvent(self,event):
         window=[self.settingw,self.historyw]
@@ -277,32 +283,51 @@ class MainWindow(QMainWindow):
         t1.setMinimumSize(750,230)
         layout_f1.addWidget(t1)
         layout_f1.addStretch(2)
-        
-        
+
+        keywords=['网页','博客','文章','帖子','Wiki','文档','教程','手册','报告','百科','简历',
+                      '电子书','演讲稿','课件','规范','合同','论文','文章','新闻','计划','指南','说明',
+                      '分析','笔记','词典','诗歌','小说','剧本','攻略','日志','论文','新闻','公告']
         def answer():
-            answer=self.gemini.get_content(self.question)
+            self.code=1
+            for i in keywords:
+                if i in self.question:self.code=0
+            answer=self.gemini.get_content(self.code,self.question)
             answer_text='Gemini:\n    '+answer+'\n'
-            t2.append(answer_text)
+            if self.code==0:self.answersignal.emit(answer_text)
+            else:t2.append(answer_text)
             self.historyw.ta.append(answer_text)
+            self.clearsignal.emit('signal')
+            setenable(True)
+        def sethtml(html):
+            t2.insertHtml(html)
+            clearcontent(t1)
+            setenable(True)
         def answerthread():
             self.question=t1.toPlainText()
             if self.state==None:
-                self.question+=',所有回答请用简体中文'
+                self.question+=',语言请用简体中文\n'###############################响应式布局
                 self.state=1
-            question_text='我:\n    '+self.question
-            t2.append(question_text)
+            question_text='我:\n'+self.question+'\n'
             self.historyw.ta.append(question_text)
+            t2.append(question_text)
             self.thread=threading.Thread(target=answer)
             self.thread.start()
+            t1.setText('请等待回答...')
+            setenable(False)
+        self.answersignal.connect(sethtml)
+        self.clearsignal.connect(lambda:clearcontent(t1))
         layout_content=QHBoxLayout()
         b2=QPushButton('发送')
         b2.setStyleSheet('border-radius:15px')
         b2.setMinimumSize(380,30)
         b2.clicked.connect(answerthread)
-        def clearcontent():
-            t2.clear()
+        def setenable(bool):
+            b2.setEnabled(bool)
+            b3.setEnabled(bool)
+        def clearcontent(qt):
+            qt.clear()
         b3=QPushButton('清空')
-        b3.clicked.connect(clearcontent)
+        b3.clicked.connect(lambda:clearcontent(t2))
         b3.setStyleSheet('border-radius:15px')
         b3.setMinimumSize(380,30)
         for i in b2,b3:
