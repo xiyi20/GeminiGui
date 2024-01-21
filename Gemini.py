@@ -3,13 +3,15 @@ import sys
 import json
 import random
 import markdown
+import requests
+import webbrowser
 import threading
 from PyQt6.QtGui import *
 from PyQt6.QtCore import *
 from PyQt6.QtWidgets import *
 import google.generativeai as genai
 
-VERSION=1.0
+
 find_radius=re.compile(r'border-radius:(.*?)px')
 find_text=re.compile(r'text: "(.*?)"')
 ml=[]
@@ -55,6 +57,9 @@ dncurve=config['dynamic']['curve']
 
 class MessageBox(QObject):
     messageSignal=pyqtSignal(str)
+    def __init__(self,url=None):
+        super().__init__
+        self.url=url
     @pyqtSlot(str)
     def show(self,msg,tittle='警告',level=QMessageBox.Icon.Warning):
         messagebox=QMessageBox()
@@ -62,7 +67,10 @@ class MessageBox(QObject):
         messagebox.setIcon(level)
         messagebox.setWindowTitle(tittle)
         messagebox.setText(msg)
+        messagebox.accepted.connect(lambda:self.onAccepted(self.url))
         messagebox.exec()
+    def onAccepted(self,url):
+        if url is not None:webbrowser.open(url)
 
 messagebox=MessageBox()
 
@@ -214,6 +222,25 @@ class GetColor(QColorDialog):
         if self.color.isValid():
             return self.color.name()
 
+class CheckUpdate():
+    def __init__(self):
+        super().__init__()
+        self.VERSION=1.20
+        self.desc=None
+        self.url=None
+    def checkUpdate(self):
+        url="https://raw.githubusercontent.com/xiyi20/GeminiGui/main/update.json"
+        response=requests.get(url)
+        data=response.json()
+        new_version=data["version"]
+        if self.VERSION<new_version:
+            self.desc=data["desc"]
+            self.url=data["url"]
+            cumessagebox=MessageBox(self.url)
+            cumessagebox.show('更新说明:'+self.desc+'\n更新地址:'+self.url,'检测到新版本:'+str(new_version),QMessageBox.Icon.Information)
+
+checkupdate=CheckUpdate()
+
 class MainWindow(QMainWindow):
     answersignal=pyqtSignal(str)
     clearsignal=pyqtSignal(str)
@@ -228,8 +255,7 @@ class MainWindow(QMainWindow):
         self.gemini=Gemini()
         self.question=None
         self.initUI()
-    def checkUpdate():
-        pass
+        checkupdate.checkUpdate()
     def closeEvent(self,event):
         window=[self.settingw,self.historyw]
         for i in window:
