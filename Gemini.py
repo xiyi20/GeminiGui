@@ -9,7 +9,7 @@ from PyQt6.QtCore import *
 from PyQt6.QtWidgets import *
 import google.generativeai as genai
 
-
+VERSION=1.0
 find_radius=re.compile(r'border-radius:(.*?)px')
 find_text=re.compile(r'text: "(.*?)"')
 ml=[]
@@ -56,11 +56,11 @@ dncurve=config['dynamic']['curve']
 class MessageBox(QObject):
     messageSignal=pyqtSignal(str)
     @pyqtSlot(str)
-    def show(self,msg):
+    def show(self,msg,tittle='警告',level=QMessageBox.Icon.Warning):
         messagebox=QMessageBox()
         messagebox.setWindowIcon(QIcon('images/warm.png'))
-        messagebox.setIcon(QMessageBox.Icon.Warning)
-        messagebox.setWindowTitle('警告')
+        messagebox.setIcon(level)
+        messagebox.setWindowTitle(tittle)
         messagebox.setText(msg)
         messagebox.exec()
 
@@ -217,9 +217,9 @@ class GetColor(QColorDialog):
 class MainWindow(QMainWindow):
     answersignal=pyqtSignal(str)
     clearsignal=pyqtSignal(str)
-    def __init__(self):
+    def __init__(self,screen):
         super().__init__()
-        self.setGeometry(400,50,800,800)
+        self.setGeometry(400,40,screen.width()//2,int(screen.height()*0.9))
         self.settingw=None
         self.historyw=None
         self.thread=None
@@ -228,6 +228,8 @@ class MainWindow(QMainWindow):
         self.gemini=Gemini()
         self.question=None
         self.initUI()
+    def checkUpdate():
+        pass
     def closeEvent(self,event):
         window=[self.settingw,self.historyw]
         for i in window:
@@ -290,10 +292,12 @@ class MainWindow(QMainWindow):
         def answer():
             self.code=1
             for i in keywords:
-                if i in self.question:self.code=0
+                if i in self.question:
+                    self.code=0
+                    break
             answer=self.gemini.get_content(self.code,self.question)
-            answer_text='Gemini:\n    '+answer+'\n'
-            if self.code==0:self.answersignal.emit(answer_text)
+            answer_text='Gemini:\n'+answer+'\n'
+            if self.code==0:self.answersignal.emit('<br>'+answer_text)
             else:t2.append(answer_text)
             self.historyw.ta.append(answer_text)
             self.clearsignal.emit('signal')
@@ -305,9 +309,9 @@ class MainWindow(QMainWindow):
         def answerthread():
             self.question=t1.toPlainText()
             if self.state==None:
-                self.question+=',语言请用简体中文\n'###############################响应式布局
+                self.question+=',语言请用简体中文'
                 self.state=1
-            question_text='我:\n'+self.question+'\n'
+            question_text='我:\n'+self.question
             self.historyw.ta.append(question_text)
             t2.append(question_text)
             self.thread=threading.Thread(target=answer)
@@ -658,7 +662,7 @@ class SettingWindow(QMainWindow):
         
 def main():
     app=QApplication(sys.argv)
-    mainWindow=MainWindow()
+    mainWindow=MainWindow(app.primaryScreen().size())
     mainWindow.show()
     sys.exit(app.exec())
 if __name__=='__main__':
