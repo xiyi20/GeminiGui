@@ -9,7 +9,7 @@ on:
     branches:
       - main
     paths:
-      - update.json
+      - Gemini.py
 
 jobs:
   pyinstaller-build:
