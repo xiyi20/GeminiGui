@@ -4,18 +4,19 @@ import json
 import random
 import markdown
 import requests
-import webbrowser
 import threading
+import webbrowser
 from PyQt6.QtGui import *
 from PyQt6.QtCore import *
 from PyQt6.QtWidgets import *
+from functools import partial
 import google.generativeai as genai
 
-
-find_radius=re.compile(r'border-radius:(.*?)px')
-find_text=re.compile(r'text: "(.*?)"')
 ml=[]
 config=None
+VERSION=1.30
+find_radius=re.compile(r'border-radius:(.*?)px')
+find_text=re.compile(r'text: "(.*?)"')
 
 def getcolor():
     rgb=(random.randint(0,255),random.randint(0,255),random.randint(0,255))
@@ -57,17 +58,14 @@ dncurve=config['dynamic']['curve']
 
 class MessageBox(QObject):
     messageSignal=pyqtSignal(str)
-    def __init__(self,url=None):
-        super().__init__
-        self.url=url
     @pyqtSlot(str)
-    def show(self,msg,tittle='警告',level=QMessageBox.Icon.Warning):
+    def show(self,msg='测试',tittle='警告',level='QMessageBox.Icon.Warning',url='测试链接'):
         messagebox=QMessageBox()
         messagebox.setWindowIcon(QIcon('images/warm.png'))
-        messagebox.setIcon(level)
+        messagebox.setIcon(eval(level))
         messagebox.setWindowTitle(tittle)
         messagebox.setText(msg)
-        messagebox.accepted.connect(lambda:self.onAccepted(self.url))
+        messagebox.accepted.connect(lambda:self.onAccepted(url))
         messagebox.exec()
     def onAccepted(self,url):
         if url is not None:webbrowser.open(url)
@@ -222,22 +220,27 @@ class GetColor(QColorDialog):
         if self.color.isValid():
             return self.color.name()
 
-class CheckUpdate():
+class CheckUpdate(QObject):
     def __init__(self):
         super().__init__()
-        self.VERSION=1.20
         self.desc=None
         self.url=None
+        self.cumessagebox=MessageBox()
     def checkUpdate(self):
         url="https://raw.githubusercontent.com/xiyi20/GeminiGui/main/update.json"
-        response=requests.get(url)
-        data=response.json()
-        new_version=data["version"]
-        if self.VERSION<new_version:
-            self.desc=data["desc"]
-            self.url=data["url"]
-            cumessagebox=MessageBox(self.url)
-            cumessagebox.show('更新说明:'+self.desc+'\n更新地址:'+self.url,'检测到新版本:'+str(new_version),QMessageBox.Icon.Information)
+        try:    
+            response=requests.get(url)
+            data=response.json()
+            new_version=data["version"]
+            if VERSION<new_version:
+                    self.desc=data["desc"]
+                    self.url=data["url"]
+                    messagebox.messageSignal.connect(partial(messagebox.show,'更新说明:'+self.desc+'\n更新地址:'+self.url,'检测到新版本:'+str(new_version),'QMessageBox.Icon.Information',self.url))
+            else:
+                messagebox.messageSignal.connect(partial(messagebox.show,'当前已是最新版本','通知','QMessageBox.Icon.Information'))
+        except Exception as e:
+            messagebox.messageSignal.connect(partial(messagebox.show,f'原因:\n{type(e).__name__}:{e}','检查更新失败','QMessageBox.Icon.Warning'))
+        messagebox.messageSignal.emit('signal')
 
 checkupdate=CheckUpdate()
 
@@ -255,7 +258,6 @@ class MainWindow(QMainWindow):
         self.gemini=Gemini()
         self.question=None
         self.initUI()
-        checkupdate.checkUpdate()
     def closeEvent(self,event):
         window=[self.settingw,self.historyw]
         for i in window:
@@ -582,7 +584,6 @@ class SettingWindow(QMainWindow):
         for i in layout_window1,layout_window2,layout_window3,layout_window4:
             layout_window.addLayout(i)
 
-
         l8=QLabel('动效设置')
         l8.setFont(QFont('微软雅黑',15))
         l8.setAlignment(Qt.AlignmentFlag.AlignHCenter)
@@ -668,7 +669,8 @@ class SettingWindow(QMainWindow):
         b12=QPushButton()
         b12.setIcon(QIcon('images/save.png'))
         b12.clicked.connect(lambda:setdynamic(0,curve_dict[combobox.currentText()]))
-
+        update=QPushButton('检查更新')
+        update.clicked.connect(update_thread)
         for i in b1,b2,b7,b8,b9,b10,b11,b12,b13:
             i.setStyleSheet('background:rgba(0,0,0,0)')
 
@@ -677,7 +679,7 @@ class SettingWindow(QMainWindow):
             if i==0:layout_dynamic1.addStretch(1)
             else:layout_dynamic1.addWidget(i)
 
-        for i in [l1,cb1,layout_blur,l3,layout_window,l8,cb2,layout_dynamic,layout_dynamic1]:
+        for i in [l1,cb1,layout_blur,l3,layout_window,l8,cb2,layout_dynamic,layout_dynamic1,update]:
             if i in [layout_blur,layout_window,layout_dynamic,layout_dynamic1]:layout_f1.addLayout(i)
             else:layout_f1.addWidget(i)
         layout_f1.addStretch(1)
@@ -685,11 +687,17 @@ class SettingWindow(QMainWindow):
         self.mwbg.setStyleSheet('background:'+bgcolor)
         center.setStyleSheet('background:'+bgcolor)
         b3.setStyleSheet(center.styleSheet())
-        
+
+def update_thread():
+    update=threading.Thread(target=checkupdate.checkUpdate)
+    update.start()
+
 def main():
+    update_thread()
     app=QApplication(sys.argv)
     mainWindow=MainWindow(app.primaryScreen().size())
     mainWindow.show()
     sys.exit(app.exec())
+
 if __name__=='__main__':
     main()
