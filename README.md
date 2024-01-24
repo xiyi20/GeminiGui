@@ -41,5 +41,5 @@ GeminiGui由Mr.Wood进行开发和维护。
 
 ## 链接
 
-- 项目链接：[https://github.com/yourusername/geminigui](https://github.com/xiyi20/GeminiGui.git)
-- 谷歌Gemini API文档：[https://docs.google.com/gemini/api](https://ai.google.dev/docs?hl=zh-cn)
+- 项目链接：[https://github.com/xiyi20/GeminiGui.git](https://github.com/xiyi20/GeminiGui.git)
+- 谷歌Gemini API文档：[https://ai.google.dev/docs](https://ai.google.dev/docs?hl=zh-cn)

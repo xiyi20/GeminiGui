@@ -1,5 +1,5 @@
 {
-    "version": 1.40,
-    "desc": "优化代码,修复信号槽之间一处bug,增加修改检查更新间隔",
-    "url": "https://github.com/xiyi20/GeminiGui/actions/runs/7623468968/artifacts/1188116065"
+    "version": 1.50,
+    "desc": "优化界面布局,修复检查更新的一处bug",
+    "url": "https://github.com/xiyi20/GeminiGui/actions/runs/7636392266/artifacts/1190885639"
 }
