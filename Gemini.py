@@ -16,9 +16,11 @@ import google.generativeai as genai
 
 ml=[]
 config=None
-VERSION=1.40
+VERSION=1.50
 qt_newversion=None
 qt_lasttime=None
+m_width=None
+m_height=None
 find_radius=re.compile(r'border-radius:(.*?)px')
 find_text=re.compile(r'text: "(.*?)"')
 
@@ -70,16 +72,16 @@ class MessageBox(QObject):
         if self.connection is not None:self.messageSignal.disconnect(self.connection)
         self.connection=self.messageSignal.connect(slot)
     @pyqtSlot(str)
-    def show(self,msg='测试',tittle='警告',level='QMessageBox.Icon.Warning',url='测试链接'):
+    def show(self,msg='测试',tittle='警告',level='QMessageBox.Icon.Warning',url=None,open=False):
         messagebox=QMessageBox()
         messagebox.setWindowIcon(QIcon('images/warm.png'))
         messagebox.setIcon(eval(level))
         messagebox.setWindowTitle(tittle)
         messagebox.setText(msg)
-        messagebox.accepted.connect(lambda:self.onAccepted(url))
+        messagebox.accepted.connect(lambda:self.onAccepted(url,open))
         messagebox.exec()
-    def onAccepted(self,url):
-        if url is not None:webbrowser.open(url)
+    def onAccepted(self,url,open):
+        if open:webbrowser.open(url)
 
 messagebox=MessageBox()
 
@@ -104,7 +106,7 @@ class CheckUpdate:
             if VERSION<new_version:
                     self.desc=data["desc"]
                     self.url=data["url"]
-                    messagebox.connectshow(partial(messagebox.show,'当前版本:'+str(VERSION)+'\n云端版本:'+str(new_version)+'\n更新说明:'+self.desc+'\n更新地址:'+self.url+'\n点击OK将跳转下载','检测到更新','QMessageBox.Icon.Information',self.url))
+                    messagebox.connectshow(partial(messagebox.show,'当前版本:'+str(VERSION)+'\n云端版本:'+str(new_version)+'\n更新说明:'+self.desc+'\n更新地址:'+self.url+'\n点击OK将跳转下载','检测到更新','QMessageBox.Icon.Information',self.url,True))
             else:
                 messagebox.connectshow(partial(messagebox.show,'当前已是最新版本','通知','QMessageBox.Icon.Information'))
             rwconfig.wconfig('update','lasttime',datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
@@ -123,6 +125,8 @@ class CheckUpdate:
         except Exception as e:
             messagebox.connectshow(partial(messagebox.show,f'原因:\n{type(e).__name__}:{e}','检查更新失败','QMessageBox.Icon.Warning'))
             messagebox.messageSignal.emit('signal')
+            return None
+
 checkupdate=CheckUpdate()
 
 class Gemini:
@@ -276,16 +280,16 @@ class GetColor(QColorDialog):
 class MainWindow(QMainWindow):
     answersignal=pyqtSignal(str)
     clearsignal=pyqtSignal(str)
-    def __init__(self,screen):
+    def __init__(self):
         super().__init__()
-        self.setGeometry(400,40,screen.width()//2,int(screen.height()*0.9))
+        self.code=None
+        self.state=None
+        self.thread=None
+        self.question=None
         self.settingw=None
         self.historyw=None
-        self.thread=None
-        self.state=None
-        self.code=None
         self.gemini=Gemini()
-        self.question=None
+        self.setGeometry(450,50,m_width,m_height)
         self.initUI()
     def closeEvent(self,event):
         window=[self.settingw,self.historyw]
@@ -311,7 +315,7 @@ class MainWindow(QMainWindow):
         self.setWindowTitle('Gemini AI')
 
         f1=QFrame(self)
-        f1.resize(800,800)
+        f1.resize(m_width,m_height)
         layout_f1=QVBoxLayout(f1)
         
         def settingwindow():
@@ -339,7 +343,7 @@ class MainWindow(QMainWindow):
         layout_f1.addStretch()
 
         t1=QTextEdit()
-        t1.setMinimumSize(750,230)
+        t1.setMinimumSize(int(m_width*0.9),int(m_height*0.3))
         layout_f1.addWidget(t1)
         layout_f1.addStretch(2)
 
@@ -381,7 +385,7 @@ class MainWindow(QMainWindow):
         layout_content=QHBoxLayout()
         b2=QPushButton('发送')
         b2.setStyleSheet('border-radius:15px')
-        b2.setMinimumSize(380,30)
+        b2.setMinimumSize(int(m_width*0.5)-10,int(m_height*0.05))
         b2.clicked.connect(answerthread)
         def setenable(bool):
             b2.setEnabled(bool)
@@ -391,7 +395,7 @@ class MainWindow(QMainWindow):
         b3=QPushButton('清空')
         b3.clicked.connect(lambda:clearcontent(t2))
         b3.setStyleSheet('border-radius:15px')
-        b3.setMinimumSize(380,30)
+        b3.setMinimumSize(int(m_width*0.5)-10,int(m_height*0.05))
         for i in b2,b3:
             layout_content.addWidget(i)
         layout_f1.addLayout(layout_content)
@@ -399,7 +403,7 @@ class MainWindow(QMainWindow):
 
         t2=QTextEdit()
         t2.setReadOnly(True)
-        t2.setMinimumSize(750,400)
+        t2.setMinimumSize(int(m_width*0.9),int(m_height*0.5))
     
         for i in t1,t2:
             i.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
@@ -417,7 +421,7 @@ class HistoryWindow(QMainWindow):
         self.initUI()
     def initUI(self):
         self.setWindowTitle('对话历史')   
-        self.setGeometry(0,100,400,400)
+        self.setGeometry(50,100,400,400)
         self.setWindowIcon(QIcon('images/history.png'))
         self.center=QWidget(self)
         shapes=[
@@ -453,7 +457,7 @@ class SettingWindow(QMainWindow):
         self.initUI()
     def initUI(self):
         self.setWindowTitle('设置')   
-        self.setGeometry(1200,100,400,470)
+        self.setGeometry(m_width+450,100,400,470)
         self.setWindowIcon(QIcon('images/setting.png'))
         center=QWidget(self)
         shapes=[
@@ -700,7 +704,7 @@ class SettingWindow(QMainWindow):
         def setinterval(days):
             rwconfig.wconfig('update','interval',days)
         layout_update1=QHBoxLayout()
-        interval_dict={'1天':1,'3天':3,'5天':5,'7天':7}
+        interval_dict={'每次':0,'1天':1,'3天':3,'5天':5,'7天':7}
         l12=QLabel('检查间隔:')
         combobox2=QComboBox()
         for key,value in interval_dict.items():
@@ -715,7 +719,10 @@ class SettingWindow(QMainWindow):
 
         l13=QLabel('当前版本:'+str(VERSION))
         global qt_newversion
-        l14=QLabel('云端版本:'+str(checkupdate.get_data()['version']))
+        newversion=checkupdate.get_data()
+        if newversion is None:result='检查失败!'
+        else:result=str(newversion['version'])
+        l14=QLabel('云端版本:'+result)
         qt_newversion=l14
         global qt_lasttime
         l15=QLabel('检查时间:'+str(lasttime))
@@ -760,9 +767,12 @@ def update_thread(skip=False):
     update=threading.Thread(target=checkupdate.check,args=(skip,))
     update.start()
 
-def main():  
+def main():
     app=QApplication(sys.argv)
-    mainWindow=MainWindow(app.primaryScreen().size())
+    global m_width,m_height
+    m_width=int(app.primaryScreen().size().width()*0.4)
+    m_height=int(app.primaryScreen().size().height()*0.88)
+    mainWindow=MainWindow()
     mainWindow.show()
     update_thread()
     sys.exit(app.exec())
