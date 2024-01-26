@@ -8,6 +8,7 @@ import datetime
 import requests
 import threading
 import webbrowser
+import PIL.Image
 from PyQt6.QtGui import *
 from PyQt6.QtCore import *
 from PyQt6.QtWidgets import *
@@ -16,7 +17,7 @@ import google.generativeai as genai
 
 ml=[]
 config=None
-VERSION=1.50
+VERSION=1.60
 qt_newversion=None
 qt_lasttime=None
 m_width=None
@@ -88,8 +89,6 @@ messagebox=MessageBox()
 class CheckUpdate:
     def __init__(self):
         super().__init__()
-        self.desc=None
-        self.url=None
     def check(self,skip=False):
         if skip:
             self.checkUpdate()
@@ -104,11 +103,9 @@ class CheckUpdate:
             data=self.get_data()  
             new_version=data["version"]
             if VERSION<new_version:
-                    self.desc=data["desc"]
-                    self.url=data["url"]
-                    messagebox.connectshow(partial(messagebox.show,'当前版本:'+str(VERSION)+'\n云端版本:'+str(new_version)+'\n更新说明:'+self.desc+'\n更新地址:'+self.url+'\n点击OK将跳转下载','检测到更新','QMessageBox.Icon.Information',self.url,True))
+                    messagebox.connectshow(partial(messagebox.show,'当前版本:'+str(VERSION)+'\n云端版本:'+str(new_version)+'\n更新说明:'+data["desc"]+'\n更新地址:'+data["url"]+'\n点击OK将跳转下载','检测到更新','QMessageBox.Icon.Information',data["url"],True))
             else:
-                messagebox.connectshow(partial(messagebox.show,'当前已是最新版本','通知','QMessageBox.Icon.Information'))
+                messagebox.connectshow(partial(messagebox.show,'当前已是最新版本!\n'+str(new_version)+'更新日志:\n'+data["desc"],'通知','QMessageBox.Icon.Information'))
             rwconfig.wconfig('update','lasttime',datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
             lasttime=config['update']['lasttime']
             qt_newversion.setText('云端版本:'+str(checkupdate.get_data()['version']))
@@ -130,7 +127,7 @@ class CheckUpdate:
 checkupdate=CheckUpdate()
 
 class Gemini:
-    def __init__(self):
+    def __init__(self,model="gemini-pro"):
         genai.configure(api_key="AIzaSyCYbTJdgdMy5ETlRFPAcpQozMrnYLp5g0w",transport='rest')
         # Set up the model
         generation_config={
@@ -157,16 +154,19 @@ class Gemini:
                 "threshold": "BLOCK_NONE"
             },
         ]
-        self.model=genai.GenerativeModel(model_name="gemini-pro",
+        self.model=genai.GenerativeModel(model_name=model,
                                            generation_config=generation_config,
                                            safety_settings=safety_settings)
         self.chat=self.model.start_chat(history=[])
 
-    def get_content(self,code,question):
+    def get_content(self,code,question,img=None):
         try:
-            response=self.chat.send_message(question).text
-            if code==0:
-                response=markdown.markdown(response)
+            if img is None:
+                response=self.chat.send_message(question).text
+                if code==0:
+                    response=markdown.markdown(response)
+            else:
+                response=self.model.generate_content([question,img]).text
             return response
         except Exception as e:
             return f'{type(e).__name__}:{e}'
@@ -282,6 +282,8 @@ class MainWindow(QMainWindow):
     clearsignal=pyqtSignal(str)
     def __init__(self):
         super().__init__()
+        self.img_a=None
+        self.img_t=None
         self.code=None
         self.state=None
         self.thread=None
@@ -289,6 +291,7 @@ class MainWindow(QMainWindow):
         self.settingw=None
         self.historyw=None
         self.gemini=Gemini()
+        self.gemini_visual=Gemini('gemini-pro-vision')
         self.setGeometry(450,50,m_width,m_height)
         self.initUI()
     def closeEvent(self,event):
@@ -350,19 +353,26 @@ class MainWindow(QMainWindow):
         keywords=['网页','博客','文章','帖子','Wiki','文档','教程','手册','报告','百科','简历',
                       '电子书','演讲稿','课件','规范','合同','论文','文章','新闻','计划','指南','说明',
                       '分析','笔记','词典','诗歌','小说','剧本','攻略','日志','论文','新闻','公告']
-        def answer():
-            self.code=1
-            for i in keywords:
-                if i in self.question:
-                    self.code=0
-                    break
-            answer=self.gemini.get_content(self.code,self.question)
-            answer_text='Gemini:\n'+answer+'\n'
-            if self.code==0:self.answersignal.emit('<br>'+answer_text)
-            else:t2.append(answer_text)
+        def answer(img):
+            if img is None:
+                self.code=1
+                for i in keywords:
+                    if i in self.question:
+                        self.code=0
+                        break
+                answer=self.gemini.get_content(self.code,self.question)
+                answer_text='Gemini:\n'+answer+'\n'
+                if self.code==0:self.answersignal.emit('<br>'+answer_text)
+                else:t2.append(answer_text)
+            else:
+                answer=self.gemini_visual.get_content(None,self.question,self.img_a)
+                answer_text='Gemini:\n'+answer+'\n'
+                t2.append(answer_text)
+                self.img_a=None
             self.historyw.ta.append(answer_text)
             self.clearsignal.emit('signal')
             time.sleep(0.1)
+            checkimg()
             setenable(True)
         def sethtml(html):
             t2.insertHtml(html)
@@ -370,13 +380,30 @@ class MainWindow(QMainWindow):
             setenable(True)
         def answerthread():
             self.question=t1.toPlainText()
-            if self.state==None:
+            if self.img_a is not None:
                 self.question+=',语言请用简体中文'
-                self.state=1
-            question_text='我:\n'+self.question
-            self.historyw.ta.append(question_text)
-            t2.append(question_text)
-            self.thread=threading.Thread(target=answer)
+                question_text=self.question
+                t2.append('我:\n')
+                self.historyw.ta.append('我:\n')
+                cursor=t2.textCursor()
+                cursor.movePosition(QTextCursor.MoveOperation.End)
+                t2.setTextCursor(cursor)
+                cursor.insertImage(self.img_t)
+                cursor=self.historyw.ta.textCursor()
+                cursor.movePosition(QTextCursor.MoveOperation.End)
+                self.historyw.ta.setTextCursor(cursor)
+                cursor.insertImage(self.img_t)
+
+                t2.append(question_text)
+                self.historyw.ta.append(question_text)       
+            else:
+                if self.state==None:
+                    self.question+=',语言请用简体中文'
+                    self.state=1
+                question_text='我:\n'+self.question
+                self.historyw.ta.append(question_text)
+                t2.append(question_text)
+            self.thread=threading.Thread(target=answer,args=(self.img_a,))
             self.thread.start()
             t1.setText('请等待回答...')
             setenable(False)
@@ -385,21 +412,39 @@ class MainWindow(QMainWindow):
         layout_content=QHBoxLayout()
         b2=QPushButton('发送')
         b2.setStyleSheet('border-radius:15px')
-        b2.setMinimumSize(int(m_width*0.5)-10,int(m_height*0.05))
+        b2.setMinimumSize(int(m_width*0.5)-26,int(m_height*0.05))
         b2.clicked.connect(answerthread)
         def setenable(bool):
+            link.setEnabled(bool)
             b2.setEnabled(bool)
             b3.setEnabled(bool)
         def clearcontent(qt):
             qt.clear()
+        def getimage():
+            if self.img_a is not None:self.img_a=None
+            else:
+                image,_=QFileDialog.getOpenFileName(self, "选择图片", "", "Images (*.png *.jpg *.jpeg *.bmp *.gif)")
+                if image:
+                    self.img_a=PIL.Image.open(image)
+                    self.img_t=QImage(image)
+                    self.img_t=self.img_t.scaled(int(self.img_t.width()/10), int(self.img_t.height()/10), 
+                                                 aspectRatioMode=Qt.AspectRatioMode.KeepAspectRatio, transformMode=Qt.TransformationMode.SmoothTransformation) 
+            checkimg()
+        def checkimg():
+            if self.img_a is not None:link.setIcon(QIcon('images/elink.png'))
+            else:link.setIcon(QIcon('images/link.png'))
+        link=QPushButton()
+        link.setMaximumSize(24,25)
+        link.clicked.connect(getimage)
+        link.setIcon(QIcon('images/link.png'))
+        link.setStyleSheet('background:rgba(0,0,0,0)')
         b3=QPushButton('清空')
         b3.clicked.connect(lambda:clearcontent(t2))
         b3.setStyleSheet('border-radius:15px')
-        b3.setMinimumSize(int(m_width*0.5)-10,int(m_height*0.05))
-        for i in b2,b3:
+        b3.setMinimumSize(int(m_width*0.5)-26,int(m_height*0.05))
+        for i in b2,link,b3:
             layout_content.addWidget(i)
         layout_f1.addLayout(layout_content)
-        layout_f1.addStretch(1)
 
         t2=QTextEdit()
         t2.setReadOnly(True)
@@ -411,7 +456,7 @@ class MainWindow(QMainWindow):
         layout_f1.addWidget(t2)
         self.historyw=HistoryWindow()
         self.settingw=SettingWindow(center,label,t1,t2,b2,b3,self.historyw.center,self.historyw.label)
-
+        
 class HistoryWindow(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -496,14 +541,13 @@ class SettingWindow(QMainWindow):
                 rwconfig.wconfig('blur','blur_radius',a)
             except ValueError:
                 messagebox.show('模糊程度应为整型(int)')
-
+        def showtext(text):
+            QToolTip.showText(QCursor.pos(),text)
         layout_blur=QHBoxLayout()
         l2=QLabel('模糊程度:')
         t1=QLineEdit()
         t1.setText(str(blradius))
         t1.setMaximumWidth(50)
-        def showtext(text):
-            QToolTip.showText(QCursor.pos(),text)
         b1=QPushButton()
         b1.setIcon(QIcon('images/warm.png'))
         b1.clicked.connect(lambda:showtext('数字越大性能开销越大!'))
@@ -762,7 +806,7 @@ class SettingWindow(QMainWindow):
         self.mwbg.setStyleSheet('background:'+bgcolor)
         center.setStyleSheet('background:'+bgcolor)
         b3.setStyleSheet(center.styleSheet()+';border-radius:10px')
-    
+
 def update_thread(skip=False):
     update=threading.Thread(target=checkupdate.check,args=(skip,))
     update.start()
