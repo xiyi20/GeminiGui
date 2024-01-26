@@ -1,5 +1,5 @@
 {
-    "version": 1.50,
-    "desc": "优化界面布局,修复检查更新的一处bug",
-    "url": "https://github.com/xiyi20/GeminiGui/actions/runs/7636392266/artifacts/1190885639"
+    "version": 1.60,
+    "desc": "优化代码和返回结果显示.增加visual-pro模型,可实现图片对话,但不包括生成图片",
+    "url": "https://github.com/xiyi20/GeminiGui/actions/runs/7665480274/artifacts/1197010727"
 }
