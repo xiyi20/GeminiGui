@@ -30,6 +30,7 @@ jobs:
           pip install pyinstaller
           pip install requests
           pip install markdown
+          pip install pillow
           pip install pyqt6
 
       - name: Create Executable
