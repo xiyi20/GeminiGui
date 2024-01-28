@@ -4,7 +4,9 @@ GeminiGui是一个使用Python编写的简易对话程序，它通过调用谷�
 
 Gemini是谷歌的自然语言处理技术，可以理解和回答用户的问题。这个项目的目的是为了提供一个简单的界面，让用户可以与Gemini进行对话，并获取有用的信息和答案。
 
-## 注意:本工具需要科学上网！
+## 注意
+
+- 本工具需要科学上网！
 
 ## 功能特点
 
@@ -14,14 +16,14 @@ Gemini是谷歌的自然语言处理技术，可以理解和回答用户的问�
 - 支持多种编程语言和技术领域的问题
 
 ## 使用方法
-
-1. 登录你的GITHUB账户
-2. 在本仓库的[Actions](https://github.com/xiyi20/GeminiGui/actions)页面选择最新的一个工作流
-3. 下滑找到该工作流的Artifacts
-4. 点击Artifacts中的Gemini-Artifacts以下载该版本
-5. 将其解压到电脑的任意位置
-6. 双击运行Gemini.exe文件以启动该程序
-7. 在提示框中输入你的问题并点击发送
+1. 获取你的[APIKEY](https://ai.google.dev/)
+2. 登录你的GITHUB账户
+3. 在本仓库的[Actions](https://github.com/xiyi20/GeminiGui/actions)页面选择最新的一个工作流
+4. 下滑找到该工作流的Artifacts
+5. 点击Artifacts中的Gemini-Artifacts以下载该版本
+6. 将其解压到电脑的任意位置
+7. 双击运行Gemini.exe文件以启动该程序
+8. 在提示框中输入你的问题并点击发送
 
 ## 程序预览
 
