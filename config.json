@@ -1,10 +1,13 @@
 {
+    "gemini": {
+        "apikey": ""
+    },
     "blur": {
         "open": 0,
         "blur_radius": 150
     },
     "window": {
-        "bg_color": "#ffffff",
+        "bg_color": "white",
         "theme": "default",
         "q_radius": 15,
         "a_radius": 15
@@ -12,10 +15,10 @@
     "dynamic": {
         "open": 0,
         "speed": 1000,
-        "curve": "QEasingCurve.Type.InOutQuart"
+        "curve": "QEasingCurve.Type.Linear"
     },
     "update": {
         "interval": 1,
-        "lasttime": "2024-01-25 19:47:10"
+        "lasttime": "2024-01-28 12:52:28"
     }
 }

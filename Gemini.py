@@ -16,14 +16,19 @@ from functools import partial
 import google.generativeai as genai
 
 ml=[]
+link=None
+img_a=None
+img_t=None
+image=None
 config=None
-VERSION=1.60
+VERSION=1.70
 qt_newversion=None
 qt_lasttime=None
 m_width=None
 m_height=None
 find_radius=re.compile(r'border-radius:(.*?)px')
 find_text=re.compile(r'text: "(.*?)"')
+find_color=re.compile(r'background:(.*?);')
 
 def getcolor():
     rgb=(random.randint(0,255),random.randint(0,255),random.randint(0,255))
@@ -51,6 +56,8 @@ class RwConfig:
             MessageBox('没有足够权限读取或写入配置文件!')
 
 rwconfig=RwConfig()
+apikey=config['gemini']['apikey']
+
 blopen=config['blur']['open']
 blradius=config['blur']['blur_radius']
 
@@ -69,11 +76,13 @@ lasttime=datetime.datetime.strptime(config['update']['lasttime'],'%Y-%m-%d %H:%M
 class MessageBox(QObject):
     messageSignal=pyqtSignal(str)
     connection=None
+    def __init__(self):
+        super().__init__()
     def connectshow(self,slot):
         if self.connection is not None:self.messageSignal.disconnect(self.connection)
         self.connection=self.messageSignal.connect(slot)
     @pyqtSlot(str)
-    def show(self,msg='测试',tittle='警告',level='QMessageBox.Icon.Warning',url=None,open=False):
+    def showmsg(self,msg='测试',tittle='警告',level='QMessageBox.Icon.Warning',url=None,open=False):
         messagebox=QMessageBox()
         messagebox.setWindowIcon(QIcon('images/warm.png'))
         messagebox.setIcon(eval(level))
@@ -81,6 +90,25 @@ class MessageBox(QObject):
         messagebox.setText(msg)
         messagebox.accepted.connect(lambda:self.onAccepted(url,open))
         messagebox.exec()
+    def showdialog(self,mode='input'):
+        if mode=='input':
+            api,ok=QInputDialog.getText(None,'提示','输入你的apikey:')  
+            if ok:
+                rwconfig.wconfig('gemini','apikey',api)
+                global apikey
+                apikey=api
+                self.showmsg('设置成功','提示','QMessageBox.Icon.Information')
+            else:sys.exit()
+        if mode=='file':
+            global image,img_a,img_t,link
+            image,_=QFileDialog.getOpenFileName(None, "选择图片", "", "Images (*.png *.jpg *.jpeg *.bmp *.gif)")
+            if image:
+                img_a=PIL.Image.open(image)
+                img_t=QImage(image)
+                img_t=img_t.scaled(int(img_t.width()/10),int(img_t.height()/10), 
+                                                aspectRatioMode=Qt.AspectRatioMode.KeepAspectRatio
+                                                ,transformMode=Qt.TransformationMode.SmoothTransformation) 
+                checkimg(link)
     def onAccepted(self,url,open):
         if open:webbrowser.open(url)
 
@@ -103,15 +131,19 @@ class CheckUpdate:
             data=self.get_data()  
             new_version=data["version"]
             if VERSION<new_version:
-                    messagebox.connectshow(partial(messagebox.show,'当前版本:'+str(VERSION)+'\n云端版本:'+str(new_version)+'\n更新说明:'+data["desc"]+'\n更新地址:'+data["url"]+'\n点击OK将跳转下载','检测到更新','QMessageBox.Icon.Information',data["url"],True))
+                    messagebox.connectshow(partial(messagebox.showmsg,'当前版本:'+str(VERSION)
+                                                   +'\n云端版本:'+str(new_version)+'\n更新说明:'+data["desc"]
+                                                   +'\n更新地址:'+data["url"]+'\n点击OK将跳转下载','检测到更新'
+                                                   ,'QMessageBox.Icon.Information',data["url"],True))
             else:
-                messagebox.connectshow(partial(messagebox.show,'当前已是最新版本!\n'+str(new_version)+'更新日志:\n'+data["desc"],'通知','QMessageBox.Icon.Information'))
+                messagebox.connectshow(partial(messagebox.showmsg,'当前已是最新版本!\n'+str(new_version)
+                                               +'更新日志:\n'+data["desc"],'通知','QMessageBox.Icon.Information'))
             rwconfig.wconfig('update','lasttime',datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
             lasttime=config['update']['lasttime']
             qt_newversion.setText('云端版本:'+str(checkupdate.get_data()['version']))
             qt_lasttime.setText('检查时间:'+lasttime)
         except Exception as e:
-            messagebox.connectshow(partial(messagebox.show,f'原因:\n{type(e).__name__}:{e}','检查更新失败','QMessageBox.Icon.Warning'))
+            messagebox.connectshow(partial(messagebox.showmsg,f'原因:\n{type(e).__name__}:{e}','检查更新失败','QMessageBox.Icon.Warning'))
         messagebox.messageSignal.emit('signal')
     def get_data(self):
         try:
@@ -120,7 +152,7 @@ class CheckUpdate:
             data=response.json()
             return data
         except Exception as e:
-            messagebox.connectshow(partial(messagebox.show,f'原因:\n{type(e).__name__}:{e}','检查更新失败','QMessageBox.Icon.Warning'))
+            messagebox.connectshow(partial(messagebox.showmsg,f'原因:\n{type(e).__name__}:{e}','检查更新失败','QMessageBox.Icon.Warning'))
             messagebox.messageSignal.emit('signal')
             return None
 
@@ -128,7 +160,7 @@ checkupdate=CheckUpdate()
 
 class Gemini:
     def __init__(self,model="gemini-pro"):
-        genai.configure(api_key="AIzaSyCYbTJdgdMy5ETlRFPAcpQozMrnYLp5g0w",transport='rest')
+        genai.configure(api_key=apikey,transport='rest')
         # Set up the model
         generation_config={
             "temperature": 0.9,
@@ -170,7 +202,7 @@ class Gemini:
             return response
         except Exception as e:
             return f'{type(e).__name__}:{e}'
-            # messagebox.messageSignal.connect(messagebox.show)
+            # messagebox.messageSignal.connect(messagebox.showmsg)
             # messagebox.messageSignal.emit(f'{type(e).__name__}:{e}')
 
 class BlurredLabel(QLabel):
@@ -278,12 +310,11 @@ class GetColor(QColorDialog):
             return self.color.name()
 
 class MainWindow(QMainWindow):
+    imgsignal=pyqtSignal(str)
     answersignal=pyqtSignal(str)
     clearsignal=pyqtSignal(str)
     def __init__(self):
         super().__init__()
-        self.img_a=None
-        self.img_t=None
         self.code=None
         self.state=None
         self.thread=None
@@ -292,7 +323,6 @@ class MainWindow(QMainWindow):
         self.historyw=None
         self.gemini=Gemini()
         self.gemini_visual=Gemini('gemini-pro-vision')
-        self.setGeometry(450,50,m_width,m_height)
         self.initUI()
     def closeEvent(self,event):
         window=[self.settingw,self.historyw]
@@ -303,7 +333,13 @@ class MainWindow(QMainWindow):
             if self.thread.is_alive():
                 self.thread.join()
         event.accept()
+    @staticmethod
+    def getimage():
+        messagebox.connectshow(partial(messagebox.showdialog,'file'))
+        messagebox.messageSignal.emit('signal')
     def initUI(self):
+        self.move(450,20)
+        self.setFixedSize(m_width,m_height)
         self.setWindowIcon(QIcon('images/Gemini.ico'))
         center=QWidget(self)
         shapes=[
@@ -354,6 +390,7 @@ class MainWindow(QMainWindow):
                       '电子书','演讲稿','课件','规范','合同','论文','文章','新闻','计划','指南','说明',
                       '分析','笔记','词典','诗歌','小说','剧本','攻略','日志','论文','新闻','公告']
         def answer(img):
+            global img_a
             if img is None:
                 self.code=1
                 for i in keywords:
@@ -365,14 +402,14 @@ class MainWindow(QMainWindow):
                 if self.code==0:self.answersignal.emit('<br>'+answer_text)
                 else:t2.append(answer_text)
             else:
-                answer=self.gemini_visual.get_content(None,self.question,self.img_a)
+                answer=self.gemini_visual.get_content(None,self.question,img_a)
                 answer_text='Gemini:\n'+answer+'\n'
                 t2.append(answer_text)
-                self.img_a=None
+                img_a=None
             self.historyw.ta.append(answer_text)
             self.clearsignal.emit('signal')
             time.sleep(0.1)
-            checkimg()
+            checkimg(link)
             setenable(True)
         def sethtml(html):
             t2.insertHtml(html)
@@ -380,7 +417,8 @@ class MainWindow(QMainWindow):
             setenable(True)
         def answerthread():
             self.question=t1.toPlainText()
-            if self.img_a is not None:
+            global img_a,img_t
+            if img_a is not None:
                 self.question+=',语言请用简体中文'
                 question_text=self.question
                 t2.append('我:\n')
@@ -388,12 +426,11 @@ class MainWindow(QMainWindow):
                 cursor=t2.textCursor()
                 cursor.movePosition(QTextCursor.MoveOperation.End)
                 t2.setTextCursor(cursor)
-                cursor.insertImage(self.img_t)
+                cursor.insertImage(img_t)
                 cursor=self.historyw.ta.textCursor()
                 cursor.movePosition(QTextCursor.MoveOperation.End)
                 self.historyw.ta.setTextCursor(cursor)
-                cursor.insertImage(self.img_t)
-
+                cursor.insertImage(img_t)
                 t2.append(question_text)
                 self.historyw.ta.append(question_text)       
             else:
@@ -403,7 +440,7 @@ class MainWindow(QMainWindow):
                 question_text='我:\n'+self.question
                 self.historyw.ta.append(question_text)
                 t2.append(question_text)
-            self.thread=threading.Thread(target=answer,args=(self.img_a,))
+            self.thread=threading.Thread(target=answer,args=(img_a,))
             self.thread.start()
             t1.setText('请等待回答...')
             setenable(False)
@@ -420,22 +457,10 @@ class MainWindow(QMainWindow):
             b3.setEnabled(bool)
         def clearcontent(qt):
             qt.clear()
-        def getimage():
-            if self.img_a is not None:self.img_a=None
-            else:
-                image,_=QFileDialog.getOpenFileName(self, "选择图片", "", "Images (*.png *.jpg *.jpeg *.bmp *.gif)")
-                if image:
-                    self.img_a=PIL.Image.open(image)
-                    self.img_t=QImage(image)
-                    self.img_t=self.img_t.scaled(int(self.img_t.width()/10), int(self.img_t.height()/10), 
-                                                 aspectRatioMode=Qt.AspectRatioMode.KeepAspectRatio, transformMode=Qt.TransformationMode.SmoothTransformation) 
-            checkimg()
-        def checkimg():
-            if self.img_a is not None:link.setIcon(QIcon('images/elink.png'))
-            else:link.setIcon(QIcon('images/link.png'))
+        global link
         link=QPushButton()
         link.setMaximumSize(24,25)
-        link.clicked.connect(getimage)
+        link.clicked.connect(imagethread)
         link.setIcon(QIcon('images/link.png'))
         link.setStyleSheet('background:rgba(0,0,0,0)')
         b3=QPushButton('清空')
@@ -455,8 +480,8 @@ class MainWindow(QMainWindow):
             i.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         layout_f1.addWidget(t2)
         self.historyw=HistoryWindow()
-        self.settingw=SettingWindow(center,label,t1,t2,b2,b3,self.historyw.center,self.historyw.label)
-        
+        self.settingw=SettingWindow(center,label,l1,t1,t2,b2,b3,self.historyw.center,self.historyw.label)    
+    
 class HistoryWindow(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -465,8 +490,9 @@ class HistoryWindow(QMainWindow):
         self.label=None
         self.initUI()
     def initUI(self):
-        self.setWindowTitle('对话历史')   
-        self.setGeometry(50,100,400,400)
+        self.setWindowTitle('对话历史')
+        self.move(50,80)
+        self.setFixedSize(400,400) 
         self.setWindowIcon(QIcon('images/history.png'))
         self.center=QWidget(self)
         shapes=[
@@ -489,10 +515,11 @@ class HistoryWindow(QMainWindow):
         layout_f1.addWidget(self.ta)
 
 class SettingWindow(QMainWindow):
-    def __init__(self,mwbg,mwlb,tq,ta,ba,bc,htbg,htlb):
+    def __init__(self,mwbg,mwlb,mwl1,tq,ta,ba,bc,htbg,htlb):
         super().__init__()
         self.mwbg=mwbg
         self.mwlb=mwlb
+        self.mwl1=mwl1
         self.htbg=htbg
         self.htlb=htlb
         self.tq=tq
@@ -501,8 +528,9 @@ class SettingWindow(QMainWindow):
         self.bc=bc
         self.initUI()
     def initUI(self):
-        self.setWindowTitle('设置')   
-        self.setGeometry(m_width+450,100,400,470)
+        self.setWindowTitle('设置') 
+        self.move(m_width+450,80)  
+        self.setFixedSize(400,470)
         self.setWindowIcon(QIcon('images/setting.png'))
         center=QWidget(self)
         shapes=[
@@ -540,7 +568,7 @@ class SettingWindow(QMainWindow):
                 cb1.setChecked(False)
                 rwconfig.wconfig('blur','blur_radius',a)
             except ValueError:
-                messagebox.show('模糊程度应为整型(int)')
+                messagebox.showmsg('模糊程度应为整型(int)')
         def showtext(text):
             QToolTip.showText(QCursor.pos(),text)
         layout_blur=QHBoxLayout()
@@ -564,21 +592,27 @@ class SettingWindow(QMainWindow):
 
         layout_window1=QHBoxLayout()
         l4=QLabel('窗口背景色:')
-        def setwindowcolor():
-            color=GetColor().getcolor()
-            if color is not None:
-                self.mwbg.setStyleSheet('background:'+color)
-                self.htbg.setStyleSheet('background:'+color)
-                center.setStyleSheet('background:'+color)
-                b3.setStyleSheet(center.styleSheet()+';border-radius:10px')
+        def setwindowcolor(skip=False):
+            if not skip:
+                color=GetColor().getcolor()
+                if color is not None:
+                    self.mwbg.setStyleSheet('background:'+color)
+                    self.htbg.setStyleSheet('background:'+color)
+                    center.setStyleSheet('background:'+color)
+                    b3.setStyleSheet(center.styleSheet()+';border-radius:10px')
+            else:
+                color=re.findall(find_color,b3.styleSheet())[0]
                 rwconfig.wconfig('window','bg_color',color)
-
+        b19=QPushButton()
+        b19.setIcon(QIcon('images/warm.png'))
+        b19.clicked.connect(lambda:showtext('背景色的优先级大于主题样式,更改后注意保存'))
         b3=QPushButton()
         b3.setMaximumSize(40,40)
         b3.clicked.connect(setwindowcolor) 
         b13=QPushButton()
         b13.setIcon(QIcon('images/save.png'))
-        qt=[l4,b3,0,b13]
+        b13.clicked.connect(lambda:setwindowcolor(True))
+        qt=[l4,b3,b19,0,b13]
         for i in qt:
             if i==0:layout_window1.addStretch(1)
             else:layout_window1.addWidget(i)
@@ -588,17 +622,20 @@ class SettingWindow(QMainWindow):
         btg1=QButtonGroup()
         def settheme(color):
             if color=='default':
+                self.mwl1.setStyleSheet('color:black')
                 self.mwbg.setStyleSheet('background:white')
                 center.setStyleSheet('background:white')
                 self.tq.setStyleSheet(f'background:rgba(255,255,255,0.5);border-radius:{qradius}px')
                 self.ba.setStyleSheet('background:rgba(0,0,0,0.5);border-radius:15px')
             else:
                 if color=='white':
+                    self.mwl1.setStyleSheet('color:black')
                     self.mwbg.setStyleSheet('background:white')
                     center.setStyleSheet('background:white')
                     self.tq.setStyleSheet(f'background:rgba(0,0,0,0.5);border-radius:{qradius}px')
                     self.ba.setStyleSheet('background:rgba(0,0,0,0.5);border-radius:15px')
                 else:
+                    self.mwl1.setStyleSheet('color:white')
                     self.mwbg.setStyleSheet('background:black')
                     center.setStyleSheet('background:black')
                     self.tq.setStyleSheet(f'background:rgba(255,255,255,0.5);border-radius:{qradius}px')
@@ -629,7 +666,7 @@ class SettingWindow(QMainWindow):
                 te.setStyleSheet(style)
                 rwconfig.wconfig('window',code,a)
             except ValueError:
-                messagebox.show('圆角应为整形(int)')
+                messagebox.showmsg('圆角应为整形(int)')
         layout_window3=QHBoxLayout()
         l6=QLabel('输入框圆角:')
         t2=QLineEdit()
@@ -686,7 +723,7 @@ class SettingWindow(QMainWindow):
                     i.animationSpeed(a)
                 rwconfig.wconfig('dynamic','speed',a)
             except ValueError:
-                messagebox.show('运动速度应为整形(int)')
+                messagebox.showmsg('运动速度应为整形(int)')
         b9=QPushButton()
         b9.setIcon(QIcon('images/warm.png'))
         b9.clicked.connect(lambda:showtext('数字越大运动越慢,建议500-1000'))
@@ -776,7 +813,7 @@ class SettingWindow(QMainWindow):
             if i==0:layout_update2.addStretch()
             else:layout_update2.addWidget(i)
         b18=QPushButton('检查更新')
-        b18.clicked.connect(lambda:update_thread(True))
+        b18.clicked.connect(lambda:updatethread(True))
         layout_update3=QVBoxLayout()
         layout_update3.addWidget(b18)
         for i in layout_update1,layout_update2,layout_update3:
@@ -790,7 +827,7 @@ class SettingWindow(QMainWindow):
             i.setStyleSheet("QComboBox { background-color: rgba(255,255,255,0.1); }"
                         "QComboBox QAbstractItemView { background-color: rgba(255,255,255,0.1); }")
             
-        for i in b1,b2,b7,b8,b9,b10,b11,b12,b13,b14:
+        for i in b1,b2,b7,b8,b9,b10,b11,b12,b13,b14,b19:
             i.setStyleSheet('background:rgba(0,0,0,0)')
 
         qt=[l10,combobox1,b11,0,b12]
@@ -807,18 +844,33 @@ class SettingWindow(QMainWindow):
         center.setStyleSheet('background:'+bgcolor)
         b3.setStyleSheet(center.styleSheet()+';border-radius:10px')
 
-def update_thread(skip=False):
-    update=threading.Thread(target=checkupdate.check,args=(skip,))
-    update.start()
+def checkimg(link):
+    global img_a
+    if img_a is not None:link.setIcon(QIcon('images/elink.png'))
+    else:link.setIcon(QIcon('images/link.png'))
+
+def imagethread():
+    global img_a,link
+    if img_a is not None:
+        img_a=None
+        checkimg(link)
+        return
+    img_thread=threading.Thread(target=MainWindow.getimage)
+    img_thread.start()
+
+def updatethread(skip=False):
+    update_thread=threading.Thread(target=checkupdate.check,args=(skip,))
+    update_thread.start()
 
 def main():
     app=QApplication(sys.argv)
+    if apikey=='':messagebox.showdialog()
     global m_width,m_height
     m_width=int(app.primaryScreen().size().width()*0.4)
     m_height=int(app.primaryScreen().size().height()*0.88)
     mainWindow=MainWindow()
     mainWindow.show()
-    update_thread()
+    updatethread()
     sys.exit(app.exec())
 
 if __name__=='__main__':
