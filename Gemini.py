@@ -21,7 +21,7 @@ img_a=None
 img_t=None
 image=None
 config=None
-VERSION=1.80
+VERSION=1.85
 qt_newversion=None
 qt_lasttime=None
 m_width=None
@@ -869,14 +869,16 @@ class SettingWindow(QMainWindow):
         layout_gemini1=QHBoxLayout()
         l18=QLabel('APIKEY:')
         t6=QLineEdit()
-        t6.setFixedWidth(300)
+        t6.setFixedWidth(275)
         t6.setText(apikey)
         b22=QPushButton()
-        b22.setIcon(QIcon('images/save.png'))
-        b22.clicked.connect(lambda:setapi(t6.text()))
-        for i in l18,t6,0,b22:
-            if i==0:layout_gemini1.addStretch(1)
-            else:layout_gemini1.addWidget(i)
+        b22.setIcon(QIcon('images/tip.png'))
+        b22.clicked.connect(lambda:showtext('保存后需要重启应用'))
+        b23=QPushButton()
+        b23.setIcon(QIcon('images/save.png'))
+        b23.clicked.connect(lambda:setapi(t6.text()))
+        for i in l18,t6,b22,b23:
+            layout_gemini1.addWidget(i)
 
         for i in l17,layout_gemini1:
             if i==l17:layout_gemini.addWidget(i)
@@ -893,7 +895,7 @@ class SettingWindow(QMainWindow):
         for i in t1,t2,t3,t4,t5,t6:
             i.setStyleSheet('background:rgba(255,255,255,0.5);border-radius:6px')
 
-        for i in b1,b2,b7,b8,b9,b10,b11,b12,b13,b14,b19,b20,b21,b22:
+        for i in b1,b2,b7,b8,b9,b10,b11,b12,b13,b14,b19,b20,b21,b22,b23:
             i.setStyleSheet('background:rgba(0,0,0,0)')
 
         for i in layout_gemini,layout_blur,layout_window,layout_dynamic,layout_update:
