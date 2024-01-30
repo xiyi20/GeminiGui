@@ -10,7 +10,8 @@
         "bg_color": "white",
         "theme": "default",
         "q_radius": 15,
-        "a_radius": 15
+        "a_radius": 15,
+        "opacity": 0.97
     },
     "dynamic": {
         "open": 0,
@@ -19,6 +20,6 @@
     },
     "update": {
         "interval": 1,
-        "lasttime": "2024-01-28 12:52:28"
+        "lasttime": "2024-01-30 12:58:48"
     }
 }

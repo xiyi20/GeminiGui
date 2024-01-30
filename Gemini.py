@@ -21,7 +21,7 @@ img_a=None
 img_t=None
 image=None
 config=None
-VERSION=1.70
+VERSION=1.80
 qt_newversion=None
 qt_lasttime=None
 m_width=None
@@ -65,6 +65,7 @@ bgcolor=config['window']['bg_color']
 bgtheme=config['window']['theme']
 qradius=config['window']['q_radius']
 aradius=config['window']['a_radius']
+opacity=config['window']['opacity']
 
 dnopen=config['dynamic']['open']
 dnspeed=config['dynamic']['speed']
@@ -82,7 +83,7 @@ class MessageBox(QObject):
         if self.connection is not None:self.messageSignal.disconnect(self.connection)
         self.connection=self.messageSignal.connect(slot)
     @pyqtSlot(str)
-    def showmsg(self,msg='测试',tittle='警告',level='QMessageBox.Icon.Warning',url=None,open=False):
+    def showmsg(self,msg='测试',tittle='警告',level='QMessageBox.Icon.Warning',url=None,open=False,qt=None):
         messagebox=QMessageBox()
         messagebox.setWindowIcon(QIcon('images/warm.png'))
         messagebox.setIcon(eval(level))
@@ -90,6 +91,9 @@ class MessageBox(QObject):
         messagebox.setText(msg)
         messagebox.accepted.connect(lambda:self.onAccepted(url,open))
         messagebox.exec()
+        if qt is not None:
+            qt.setEnabled(True)
+            qt.setText('检查更新')
     def showdialog(self,mode='input'):
         if mode=='input':
             api,ok=QInputDialog.getText(None,'提示','输入你的apikey:')  
@@ -117,33 +121,34 @@ messagebox=MessageBox()
 class CheckUpdate:
     def __init__(self):
         super().__init__()
-    def check(self,skip=False):
+    def check(self,skip=False,qt=None):
         if skip:
-            self.checkUpdate()
+            self.checkUpdate(qt)
             return
         a=datetime.datetime.now()
         b=lasttime+datetime.timedelta(days=int(interval))
         if a<b:return
-        self.checkUpdate()
-    def checkUpdate(self):
+        self.checkUpdate(qt)
+    def checkUpdate(self,qt=None):
         global lasttime
         try:
-            data=self.get_data()  
+            data=self.get_data()
+            if data is None:return
             new_version=data["version"]
             if VERSION<new_version:
                     messagebox.connectshow(partial(messagebox.showmsg,'当前版本:'+str(VERSION)
-                                                   +'\n云端版本:'+str(new_version)+'\n更新说明:'+data["desc"]
-                                                   +'\n更新地址:'+data["url"]+'\n点击OK将跳转下载','检测到更新'
-                                                   ,'QMessageBox.Icon.Information',data["url"],True))
+                                                    +'\n云端版本:'+str(new_version)+'\n更新说明:'+data["desc"]
+                                                    +'\n更新地址:'+data["url"]+'\n点击OK将跳转下载','检测到更新'
+                                                    ,'QMessageBox.Icon.Information',data["url"],True,qt))
             else:
                 messagebox.connectshow(partial(messagebox.showmsg,'当前已是最新版本!\n'+str(new_version)
-                                               +'更新日志:\n'+data["desc"],'通知','QMessageBox.Icon.Information'))
+                                                +'更新日志:\n'+data["desc"],'通知','QMessageBox.Icon.Information',qt=qt))
             rwconfig.wconfig('update','lasttime',datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
             lasttime=config['update']['lasttime']
-            qt_newversion.setText('云端版本:'+str(checkupdate.get_data()['version']))
+            qt_newversion.setText('云端版本:'+str(new_version))
             qt_lasttime.setText('检查时间:'+lasttime)
         except Exception as e:
-            messagebox.connectshow(partial(messagebox.showmsg,f'原因:\n{type(e).__name__}:{e}','检查更新失败','QMessageBox.Icon.Warning'))
+            messagebox.connectshow(partial(messagebox.showmsg,f'原因:\n{type(e).__name__}:{e}','检查更新失败','QMessageBox.Icon.Warning',qt=qt))
         messagebox.messageSignal.emit('signal')
     def get_data(self):
         try:
@@ -480,7 +485,7 @@ class MainWindow(QMainWindow):
             i.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         layout_f1.addWidget(t2)
         self.historyw=HistoryWindow()
-        self.settingw=SettingWindow(center,label,l1,t1,t2,b2,b3,self.historyw.center,self.historyw.label)    
+        self.settingw=SettingWindow(self,self.historyw,center,label,l1,t1,t2,b2,b3,self.historyw.center,self.historyw.label)  
     
 class HistoryWindow(QMainWindow):
     def __init__(self):
@@ -515,8 +520,10 @@ class HistoryWindow(QMainWindow):
         layout_f1.addWidget(self.ta)
 
 class SettingWindow(QMainWindow):
-    def __init__(self,mwbg,mwlb,mwl1,tq,ta,ba,bc,htbg,htlb):
+    def __init__(self,mwsf,htsf,mwbg,mwlb,mwl1,tq,ta,ba,bc,htbg,htlb):
         super().__init__()
+        self.mwsf=mwsf
+        self.htsf=htsf
         self.mwbg=mwbg
         self.mwlb=mwlb
         self.mwl1=mwl1
@@ -530,7 +537,7 @@ class SettingWindow(QMainWindow):
     def initUI(self):
         self.setWindowTitle('设置') 
         self.move(m_width+450,80)  
-        self.setFixedSize(400,470)
+        self.setFixedSize(400,550)
         self.setWindowIcon(QIcon('images/setting.png'))
         center=QWidget(self)
         shapes=[
@@ -544,23 +551,15 @@ class SettingWindow(QMainWindow):
         self.setCentralWidget(center)
 
         f1=QFrame(self)
-        f1.resize(400,470)
+        f1.resize(400,550)
         layout_f1=QVBoxLayout(f1)
-
-        l1=QLabel('模糊设置')
 
         def blur_open(state,num):
             self.mwlb.blur(state,num)
             self.htlb.blur(state,num)
             label.blur(state,num)
             rwconfig.wconfig('blur','open',state)
-
-        cb1=QCheckBox('取消模糊')
-        if blopen==2:
-            cb1.setChecked(True)
-        else:cb1.setChecked(False)
-        cb1.stateChanged.connect(lambda state: blur_open(state,blradius))
-
+        
         def blur_radius(num):
             try:
                 a=int(num)
@@ -571,25 +570,34 @@ class SettingWindow(QMainWindow):
                 messagebox.showmsg('模糊程度应为整型(int)')
         def showtext(text):
             QToolTip.showText(QCursor.pos(),text)
-        layout_blur=QHBoxLayout()
+
+        layout_blur=QVBoxLayout()
+        l1=QLabel('模糊设置')
+        cb1=QCheckBox('取消模糊')
+        if blopen==2:
+            cb1.setChecked(True)
+        else:cb1.setChecked(False)
+        cb1.stateChanged.connect(lambda state: blur_open(state,blradius))
+        layout_blur1=QHBoxLayout()
         l2=QLabel('模糊程度:')
         t1=QLineEdit()
         t1.setText(str(blradius))
-        t1.setMaximumWidth(50)
+        t1.setFixedWidth(40)
         b1=QPushButton()
         b1.setIcon(QIcon('images/warm.png'))
         b1.clicked.connect(lambda:showtext('数字越大性能开销越大!'))
         b2=QPushButton()
         b2.setIcon(QIcon('images/save.png'))
         b2.clicked.connect(lambda: blur_radius(t1.text()))
-        qt=[l2,t1,b1,0,b2]
-        for i in qt:
-            if i==0:layout_blur.addStretch(1)
-            else:layout_blur.addWidget(i)
-
-        l3=QLabel('界面设置')
+        for i in l2,t1,b1,0,b2:
+            if i==0:layout_blur1.addStretch(1)
+            else:layout_blur1.addWidget(i)
+        for i in l1,cb1,layout_blur1:
+            if i in [l1,cb1]:layout_blur.addWidget(i)
+            else:layout_blur.addLayout(i)
+        
         layout_window=QVBoxLayout()
-
+        l3=QLabel('界面设置')
         layout_window1=QHBoxLayout()
         l4=QLabel('窗口背景色:')
         def setwindowcolor(skip=False):
@@ -599,7 +607,7 @@ class SettingWindow(QMainWindow):
                     self.mwbg.setStyleSheet('background:'+color)
                     self.htbg.setStyleSheet('background:'+color)
                     center.setStyleSheet('background:'+color)
-                    b3.setStyleSheet(center.styleSheet()+';border-radius:10px')
+                    b3.setStyleSheet(center.styleSheet()+';border-radius:9px')
             else:
                 color=re.findall(find_color,b3.styleSheet())[0]
                 rwconfig.wconfig('window','bg_color',color)
@@ -642,7 +650,7 @@ class SettingWindow(QMainWindow):
                     self.ba.setStyleSheet('background:rgba(255,255,255,0.5);border-radius:15px')
             self.ta.setStyleSheet(self.tq.styleSheet())
             self.bc.setStyleSheet(self.ba.styleSheet())
-            b3.setStyleSheet(center.styleSheet()+';border-radius:10px')
+            b3.setStyleSheet(center.styleSheet()+';border-radius:9px')
             rwconfig.wconfig('window','theme',color)
         b4=QRadioButton('明亮')
         b4.clicked.connect(lambda:settheme('white'))
@@ -670,7 +678,7 @@ class SettingWindow(QMainWindow):
         layout_window3=QHBoxLayout()
         l6=QLabel('输入框圆角:')
         t2=QLineEdit()
-        t2.setMaximumWidth(50)
+        t2.setFixedWidth(40)
         t2.setText(str(qradius))
         b7=QPushButton()
         b7.setIcon(QIcon('images/save.png'))
@@ -683,21 +691,49 @@ class SettingWindow(QMainWindow):
         layout_window4=QHBoxLayout()
         l7=QLabel('回答框圆角:')
         t3=QLineEdit()
-        t3.setMaximumWidth(50)
+        t3.setFixedWidth(40)
         t3.setText(str(aradius))
         b8=QPushButton()
         b8.setIcon(QIcon('images/save.png'))
         b8.clicked.connect(lambda:setradius('a_radius',self.ta,t3.text()))
-        qt=[l7,t3,0,b8]
-        for i in qt:
+        for i in l7,t3,0,b8:
             if i==0:layout_window4.addStretch(1)
             else:layout_window4.addWidget(i)
 
-        for i in layout_window1,layout_window2,layout_window3,layout_window4:
-            layout_window.addLayout(i)
+        def setopacity(num):
+            try:
+                a=float(num)
+                if 0<=a<=1:
+                    self.setWindowOpacity(a)
+                    self.mwsf.setWindowOpacity(a)
+                    self.htsf.setWindowOpacity(a)
+                    rwconfig.wconfig('window','opacity',a)
+                else:messagebox.showmsg('值范围应为0—1')
+            except ValueError:
+                messagebox.showmsg('透明度应为浮点型(float)')
+        layout_window5=QHBoxLayout()
+        l16=QLabel('窗口透明度:')
+        t5=QLineEdit()
+        t5.setFixedWidth(40)
+        t5.setText(str(opacity))
+        setopacity(opacity)
+        b20=QPushButton()
+        b20.setIcon(QIcon('images/tip.png'))
+        b20.clicked.connect(lambda:showtext('数字越小越透明,仅支持0-1'))
+        b21=QPushButton()
+        b21.setIcon(QIcon('images/save.png'))
+        b21.clicked.connect(lambda:setopacity(t5.text()))
 
+        for i in l16,t5,b20,0,b21:
+            if i==0:layout_window5.addStretch(1)
+            else:layout_window5.addWidget(i)
+
+        for i in l3,layout_window1,layout_window2,layout_window3,layout_window4,layout_window5:
+            if i==l3:layout_window.addWidget(i)
+            else:layout_window.addLayout(i)
+  
+        layout_dynamic=QVBoxLayout()
         l8=QLabel('动效设置')
-        layout_dynamic=QHBoxLayout()
         def setdynamic(state,curve):
             if state==2:
                 for i in ml:
@@ -712,9 +748,10 @@ class SettingWindow(QMainWindow):
             cb2.setChecked(True)
         else:cb2.setChecked(False)
         cb2.stateChanged.connect(lambda state:setdynamic(state,eval(dncurve)))
+        layout_dynamic1=QHBoxLayout()
         l9=QLabel('运动速度:')
         t4=QLineEdit()
-        t4.setMaximumWidth(50)
+        t4.setFixedWidth(40)
         t4.setText(str(dnspeed))
         def setspeed(num):
             try:
@@ -730,16 +767,11 @@ class SettingWindow(QMainWindow):
         b10=QPushButton()
         b10.setIcon(QIcon('images/save.png'))
         b10.clicked.connect(lambda:setspeed(t4.text()))
+        for i in l9,t4,b9,0,b10:
+            if i==0:layout_dynamic1.addStretch(1)
+            else:layout_dynamic1.addWidget(i)
 
-        for i in t1,t2,t3,t4:
-            i.setStyleSheet('background:rgba(255,255,255,0.5);border-radius:6px')
-
-        qt=[l9,t4,b9,0,b10]
-        for i in qt:
-            if i==0:layout_dynamic.addStretch(1)
-            else:layout_dynamic.addWidget(i)
-
-        layout_dynamic1=QHBoxLayout()
+        layout_dynamic2=QHBoxLayout()
         curve_dict={
             "线性": QEasingCurve.Type.Linear,
             "二次方进入": QEasingCurve.Type.InQuad,
@@ -763,22 +795,26 @@ class SettingWindow(QMainWindow):
             "四次方曲线，开始缓慢，后期加速",
             "四次方曲线，开始加速，后期减速",
             "四次方曲线，开始缓慢，后期加速，再后期减速"
-        ]
-        
+        ]  
         l10=QLabel('动画曲线:')
         combobox1=QComboBox()
-
         for key,value in curve_dict.items():
             combobox1.addItem(key)
             if str(value)==dncurve[13:]:
                 combobox1.setCurrentText(key)
-
         b11=QPushButton()
         b11.setIcon(QIcon('images/tip.png'))
         b11.clicked.connect(lambda:showtext(curve_des[combobox1.currentIndex()]))
         b12=QPushButton()
         b12.setIcon(QIcon('images/save.png'))
         b12.clicked.connect(lambda:setdynamic(0,curve_dict[combobox1.currentText()]))
+        for i in l10,combobox1,b11,0,b12:
+            if i==0:layout_dynamic2.addStretch(1)
+            else:layout_dynamic2.addWidget(i)
+
+        for i in l8,cb2,layout_dynamic1,layout_dynamic2:
+            if i in [l8,cb2]:layout_dynamic.addWidget(i)
+            else:layout_dynamic.addLayout(i)
 
         layout_update=QVBoxLayout()
         l11=QLabel('更新设置')
@@ -799,13 +835,17 @@ class SettingWindow(QMainWindow):
             else:layout_update1.addWidget(i)
 
         l13=QLabel('当前版本:'+str(VERSION))
+        def setnewversion(qt):
+            newversion=checkupdate.get_data()
+            if newversion is None:result='检查失败!'
+            else:result=str(newversion['version'])
+            qt.setText('云端版本:'+result)
         global qt_newversion
-        newversion=checkupdate.get_data()
-        if newversion is None:result='检查失败!'
-        else:result=str(newversion['version'])
-        l14=QLabel('云端版本:'+result)
+        l14=QLabel('云端版本:未知')
         qt_newversion=l14
         global qt_lasttime
+        version_thread=threading.Thread(target=setnewversion,args=(l14,))
+        version_thread.start()
         l15=QLabel('检查时间:'+str(lasttime))
         qt_lasttime=l15
         layout_update2=QHBoxLayout()
@@ -813,36 +853,56 @@ class SettingWindow(QMainWindow):
             if i==0:layout_update2.addStretch()
             else:layout_update2.addWidget(i)
         b18=QPushButton('检查更新')
-        b18.clicked.connect(lambda:updatethread(True))
+        b18.clicked.connect(lambda:updatethread(True,b18))
         layout_update3=QVBoxLayout()
         layout_update3.addWidget(b18)
-        for i in layout_update1,layout_update2,layout_update3:
-            layout_update.addLayout(i)
+        for i in l11,layout_update1,layout_update2,layout_update3:
+            if i==l11:layout_update.addWidget(i)
+            else:layout_update.addLayout(i)
+        def setapi(key):
+            if key=='':
+                messagebox.showmsg('APIKEY不能为空')
+                return
+            rwconfig.wconfig('gemini','apikey',key)
+        layout_gemini=QVBoxLayout()
+        l17=QLabel('API设置')
+        layout_gemini1=QHBoxLayout()
+        l18=QLabel('APIKEY:')
+        t6=QLineEdit()
+        t6.setFixedWidth(300)
+        t6.setText(apikey)
+        b22=QPushButton()
+        b22.setIcon(QIcon('images/save.png'))
+        b22.clicked.connect(lambda:setapi(t6.text()))
+        for i in l18,t6,0,b22:
+            if i==0:layout_gemini1.addStretch(1)
+            else:layout_gemini1.addWidget(i)
 
-        for i in l1,l3,l8,l11:
+        for i in l17,layout_gemini1:
+            if i==l17:layout_gemini.addWidget(i)
+            else:layout_gemini.addLayout(i)
+
+        for i in l1,l3,l8,l11,l17:
             i.setFont(QFont('微软雅黑',15))
             i.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         for i in combobox1,combobox2:
             i.setStyleSheet("QComboBox { background-color: rgba(255,255,255,0.1); }"
                         "QComboBox QAbstractItemView { background-color: rgba(255,255,255,0.1); }")
-            
-        for i in b1,b2,b7,b8,b9,b10,b11,b12,b13,b14,b19:
+        
+        for i in t1,t2,t3,t4,t5,t6:
+            i.setStyleSheet('background:rgba(255,255,255,0.5);border-radius:6px')
+
+        for i in b1,b2,b7,b8,b9,b10,b11,b12,b13,b14,b19,b20,b21,b22:
             i.setStyleSheet('background:rgba(0,0,0,0)')
 
-        qt=[l10,combobox1,b11,0,b12]
-        for i in qt:
-            if i==0:layout_dynamic1.addStretch(1)
-            else:layout_dynamic1.addWidget(i)
-
-        for i in [l1,cb1,layout_blur,l3,layout_window,l8,cb2,layout_dynamic,layout_dynamic1,l11,layout_update]:
-            if i in [layout_blur,layout_window,layout_dynamic,layout_dynamic1,layout_update]:layout_f1.addLayout(i)
-            else:layout_f1.addWidget(i)
+        for i in layout_gemini,layout_blur,layout_window,layout_dynamic,layout_update:
+            layout_f1.addLayout(i)
         layout_f1.addStretch(1)
 
         self.mwbg.setStyleSheet('background:'+bgcolor)
         center.setStyleSheet('background:'+bgcolor)
-        b3.setStyleSheet(center.styleSheet()+';border-radius:10px')
+        b3.setStyleSheet(center.styleSheet()+';border-radius:9px')
 
 def checkimg(link):
     global img_a
@@ -858,8 +918,11 @@ def imagethread():
     img_thread=threading.Thread(target=MainWindow.getimage)
     img_thread.start()
 
-def updatethread(skip=False):
-    update_thread=threading.Thread(target=checkupdate.check,args=(skip,))
+def updatethread(skip=False,qt=None):
+    if qt is not None:
+        qt.setText('正在检查...')
+        qt.setEnabled(False)
+    update_thread=threading.Thread(target=checkupdate.check,args=(skip,qt))
     update_thread.start()
 
 def main():
