@@ -1,5 +1,5 @@
 {
-    "version": 1.70,
-    "desc": "去除默认apikey,修复背景色保存不生效,固定界面大小,优化文件打开为另一线程",
-    "url": "https://github.com/xiyi20/GeminiGui/actions/runs/7684115926/artifacts/1200375547"
+    "version": 1.80,
+    "desc": "优化代码,修复检查更新一处bug,增加窗口透明度和apikey可修改",
+    "url": "https://github.com/xiyi20/GeminiGui/actions/runs/7707008679/artifacts/1204652089"
 }
