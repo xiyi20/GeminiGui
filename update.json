@@ -1,5 +1,5 @@
 {
-    "version": 1.80,
-    "desc": "优化代码,修复检查更新一处bug,增加窗口透明度和apikey可修改",
-    "url": "https://github.com/xiyi20/GeminiGui/actions/runs/7707008679/artifacts/1204652089"
+    "version": 1.85,
+    "desc": "优化代码,修复检查更新一处bug,增加窗口透明度和apikey可修改,增加api提醒",
+    "url": "https://github.com/xiyi20/GeminiGui/actions/runs/7707283374/artifacts/1204697787"
 }
