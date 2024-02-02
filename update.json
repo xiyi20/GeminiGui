@@ -1,5 +1,5 @@
 {
-    "version": 1.85,
-    "desc": "优化代码,修复检查更新一处bug,增加窗口透明度和apikey可修改,增加api提醒",
-    "url": "https://github.com/xiyi20/GeminiGui/actions/runs/7707283374/artifacts/1204697787"
+    "version": 1.90,
+    "desc": "修复读取配置文件的一处报错,优化程序结构,减少不必要变量,修改部分功能逻辑,增加未配置api时禁止使用(强烈建议更新)",
+    "url": "https://github.com/xiyi20/GeminiGui/actions/runs/7755978215/artifacts/1215127432"
 }
