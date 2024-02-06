@@ -52,13 +52,13 @@ jobs:
 
       - name: Move Files
         run: |
-          mkdir GeminiAI\GeminiAI
-          move source\dist\Gemini.exe GeminiAI\GeminiAI\Gemini.exe
-          move images GeminiAI\GeminiAI\images
-          move config.json GeminiAI\GeminiAI\config.json
+          mkdir temp\GeminiAI
+          move source\dist\Gemini.exe temp\GeminiAI\Gemini.exe
+          move images temp\GeminiAI\images
+          move config.json temp\GeminiAI\config.json
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: Gemini-Artifacts
-          path: GeminiAI
+          path: temp
