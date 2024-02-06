@@ -10,6 +10,16 @@ on:
       - main
     paths:
       - Gemini.py
+      - Bufflabel.py
+      - Checkupdate.py
+      - Decrypt.py
+      - Historywindow.py
+      - Main.py
+      - Mainwindow.py
+      - Movelabel.py
+      - Msgbox.py
+      - Rwconfig.py
+      - Settingwindow.py
 
 jobs:
   pyinstaller-build:
@@ -27,6 +37,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install google-generativeai
+          pip install pycryptodome
           pip install pyinstaller
           pip install requests
           pip install markdown
@@ -35,14 +46,17 @@ jobs:
 
       - name: Create Executable
         run: |
-          pyinstaller --onefile --windowed --icon 'images\Gemini.ico' Gemini.py
+          cd source
+          pyinstaller --onefile --windowed --icon '..\images\Gemini.ico' Gemini.py Bufflabel.py 
+          Checkupdate.py Decrypt.py Historywindow.py Main.py MainWindow.py MoveLabel.py Msgbox.py Rwconfig.py SettingWindow.py
+          cd ..
 
       - name: Move Files
         run: |
-          mkdir GeminiAI
-          move dist\Gemini.exe GeminiAI\Gemini.exe
-          move images GeminiAI\images
-          move config.json GeminiAI\config.json
+          mkdir GeminiAI\GeminiAI
+          move sourse\dist\Gemini.exe GeminiAI\GeminiAI\Gemini.exe
+          move images GeminiAI\GeminiAI\images
+          move config.json GeminiAI\GeminiAI\config.json
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
