@@ -9,16 +9,16 @@ on:
     branches:
       - main
     paths:
-      - Gemini.py
-      - Bufflabel.py
-      - Checkupdate.py
-      - Decrypt.py
-      - Historywindow.py
       - Main.py
-      - Mainwindow.py
-      - Movelabel.py
       - Msgbox.py
+      - Gemini.py
+      - Decrypt.py
       - Rwconfig.py
+      - Movelabel.py
+      - Bufflabel.py
+      - Mainwindow.py
+      - Checkupdate.py  
+      - Historywindow.py  
       - Settingwindow.py
 
 jobs:
@@ -53,7 +53,7 @@ jobs:
       - name: Move Files
         run: |
           mkdir GeminiAI\GeminiAI
-          move sourse\dist\Gemini.exe GeminiAI\GeminiAI\Gemini.exe
+          move source\dist\Gemini.exe GeminiAI\GeminiAI\Gemini.exe
           move images GeminiAI\GeminiAI\images
           move config.json GeminiAI\GeminiAI\config.json
 
