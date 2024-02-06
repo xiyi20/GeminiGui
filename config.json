@@ -1,4 +1,7 @@
 {
+    "admin": {
+        "key": ""
+    },
     "gemini": {
         "apikey": ""
     },
@@ -20,6 +23,6 @@
     },
     "update": {
         "interval": 1,
-        "lasttime": "2024-02-02 20:28:34"
+        "lasttime": "2024-02-06 15:17:17"
     }
 }
