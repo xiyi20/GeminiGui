@@ -15,7 +15,7 @@ on:
       - Decrypt.py
       - Rwconfig.py
       - Movelabel.py
-      - Bufflabel.py
+      - Blurlabel.py
       - Mainwindow.py
       - Checkupdate.py  
       - Historywindow.py  
@@ -47,7 +47,7 @@ jobs:
       - name: Create Executable
         run: |
           cd source
-          pyinstaller --onefile --windowed --icon '..\images\Gemini.ico' Gemini.py Bufflabel.py Checkupdate.py Decrypt.py Historywindow.py Main.py MainWindow.py MoveLabel.py Msgbox.py Rwconfig.py SettingWindow.py
+          pyinstaller --onefile --windowed --icon '..\images\Gemini.ico' Gemini.py Blurlabel.py Checkupdate.py Decrypt.py Historywindow.py Main.py MainWindow.py MoveLabel.py Msgbox.py Rwconfig.py SettingWindow.py
           cd ..
 
       - name: Move Files
