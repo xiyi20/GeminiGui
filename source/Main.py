@@ -11,7 +11,7 @@ ml=[]
 config=None
 
 class Main:
-    VERSION=2.00
+    VERSION=2.10
     find_radius=re.compile(r'border-radius:(.*?)px')
     find_text=re.compile(r'text: "(.*?)"')
     find_color=re.compile(r'background:(.*?);')
