@@ -1,5 +1,5 @@
 {
-    "version": 2.00,
-    "desc": "拆分代码文件,修复更改主题的一处bug,优化代码结构(强烈建议更新)",
-    "url": "https://github.com/xiyi20/GeminiGui/actions/runs/7796981557/artifacts/1222974983"
+    "version": 2.10,
+    "desc": "修复检查更新的一处bug,修复QBasicTimer报错,优化默认主题效果(建议更新)",
+    "url": "https://github.com/xiyi20/GeminiGui/actions/runs/7898673023/artifacts/1244113425"
 }
