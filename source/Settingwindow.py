@@ -377,7 +377,7 @@ class SettingWindow(QMainWindow):
             if i==0:layout_update2.addStretch()
             else:layout_update2.addWidget(i)
         b18=QPushButton('检查更新')
-        b18.clicked.connect(lambda:SettingWindow.updatethread(True,b18,Main_ins))
+        b18.clicked.connect(lambda:SettingWindow.updatethread(self,True,b18,Main_ins))
         layout_update3=QVBoxLayout()
         layout_update3.addWidget(b18)
         for i in l11,layout_update1,layout_update2,layout_update3:

@@ -11,14 +11,13 @@ ml=[]
 config=None
 
 class Main:
-    VERSION=2.10
     find_radius=re.compile(r'border-radius:(.*?)px')
     find_text=re.compile(r'text: "(.*?)"')
     find_color=re.compile(r'background:(.*?);')
     def __init__(self) -> None:
         self.m_width=None
         self.m_height=None
-        self.VERSION=2.00
+        self.VERSION=2.15
         self.l14=None
         self.l15=None
 
