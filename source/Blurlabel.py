@@ -2,7 +2,6 @@ from PyQt6.QtWidgets import QLabel,QGraphicsBlurEffect
 from Rwconfig import RwConfig
 from Movelabel import MoveLabel
 
-
 class BlurredLabel(QLabel):
     def __init__(self,parent=None,items=[]):
         super().__init__(parent)

@@ -1,24 +1,33 @@
 import json
 import datetime
+
 class RwConfig:
     adminkey=apikey=blopen=blradius=bgcolor=bgtheme=qradius=\
     aradius=opacity=dnopen=dnspeed=dncurve=interval=lasttime=None
-    def __init__(self):  
-        try:
-            from Msgbox import messagebox
-            import Main
-            with open('config.json') as f:
-                Main.config=json.load(f)
-                self.rconfig(Main.config)
-        except FileNotFoundError:
-            messagebox.showmsg('配置文件不存在或路径错误!')
-            exit()
-        except json.decoder.JSONDecodeError:
-            messagebox.showmsg('配置文件不是有效的JSON格式!')
-            exit()
-        except PermissionError:
-            messagebox.showmsg('没有足够权限读取或写入配置文件!')
-            exit()
+    def __init__(self):
+        from Msgbox import messagebox
+        import Main
+        def loadconfig(path):
+            try:
+                with open(path) as f:
+                    Main.config=json.load(f)
+                    self.rconfig(Main.config)
+            except FileNotFoundError:
+                return False,1
+            except json.decoder.JSONDecodeError:
+                return False,2
+            except PermissionError:
+                return False,3
+            return True,None
+        configs=['config.json','../config.json']
+        for i in range(len(configs)):
+            state,error=loadconfig(configs[i])
+            if state:break
+            else:
+                if i==len(configs)-1:
+                    if error==1:messagebox.showmsg('配置文件不存在或路径错误!');exit()
+                    elif error==2:messagebox.showmsg('配置文件不是有效的JSON格式!');exit()
+                    else:messagebox.showmsg('没有足够权限读取或写入配置文件!');exit()
     @classmethod
     def rconfig(cls,config):
         #密钥配置

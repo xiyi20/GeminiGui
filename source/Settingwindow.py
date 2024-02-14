@@ -9,9 +9,8 @@ from PyQt6.QtWidgets import QLabel,QWidget,QFrame,\
     QMainWindow,QColorDialog,\
     QVBoxLayout,QHBoxLayout,QPushButton,QCheckBox,\
     QButtonGroup,QRadioButton,QLineEdit,QComboBox
-
 from Checkupdate import checkupdate
-from Bufflabel import BlurredLabel
+from Blurlabel import BlurredLabel
 
 class ColorDialog(QColorDialog):
     def __init__(self):
@@ -35,15 +34,23 @@ class SettingWindow(QMainWindow):
         self.ta=ta
         self.ba=ba
         self.bc=bc
+        self.update_thread=None
+        self.version_thread=None
         self.Main_ins=Main_ins
         self.initUI(Main_ins)
     @staticmethod
-    def updatethread(skip=False,qt=None,Main_ins=None):
+    def updatethread(self,skip=False,qt=None,Main_ins=None):
         if qt is not None:
             qt.setText('正在检查...')
             qt.setEnabled(False)
-        update_thread=threading.Thread(target=checkupdate.check,args=(skip,qt,Main_ins))
-        update_thread.start()
+        self.update_thread=threading.Thread(target=checkupdate.check,args=(skip,qt,Main_ins))
+        self.update_thread.start()
+    def closeEvent(self,event):
+        threads=[self.update_thread,self.version_thread]
+        for i in threads:
+            if i is not None and i.is_alive():
+                i.join()
+        event.accept()
     def initUI(self,Main_ins):
         from Msgbox import messagebox
         from Rwconfig import RwConfig,rwconfig
@@ -147,15 +154,17 @@ class SettingWindow(QMainWindow):
                 self.mwl1.setStyleSheet('color:black')
                 self.mwbg.setStyleSheet('background:white')
                 center.setStyleSheet('background:white')
-                self.tq.setStyleSheet(f'background:rgba(206,206,206,0.5);border-radius:{RwConfig.qradius}px')
-                self.ba.setStyleSheet('background:rgba(206,206,206,0.5);border-radius:15px')
+                color1='rgba(215,215,215,0.3)'
+                color2='rgba(5,5,5,0.5)'
+                self.tq.setStyleSheet(f'background:{color1};border-radius:{RwConfig.qradius}px')  
+                self.ba.setStyleSheet(f'background:{color1};border-radius:15px;color:{color2}')
             else:
                 if color=='white':
                     self.mwl1.setStyleSheet('color:black')
                     self.mwbg.setStyleSheet('background:white')
                     center.setStyleSheet('background:white')
                     self.tq.setStyleSheet(f'background:rgba(255,255,255,0.5);border-radius:{RwConfig.qradius}px')
-                    self.ba.setStyleSheet('background:rgba(0,0,0,0.5);border-radius:15px')
+                    self.ba.setStyleSheet('background:rgba(200,200,200,0.5);border-radius:15px')
                 else:
                     self.mwl1.setStyleSheet('color:white')
                     self.mwbg.setStyleSheet('background:black')
@@ -355,13 +364,13 @@ class SettingWindow(QMainWindow):
 
         l13=QLabel('当前版本:'+str(Main_ins.VERSION))
         def setnewversion(qt):
-            newversion=checkupdate.get_data()
+            newversion=checkupdate.getdata()
             if newversion is None:result='检查失败!'
             else:result=str(newversion['version'])
             qt.setText('云端版本:'+result)
         Main_ins.l14=QLabel('云端版本:未知')
-        version_thread=threading.Thread(target=setnewversion,args=(Main_ins.l14,))
-        version_thread.start()
+        self.version_thread=threading.Thread(target=setnewversion,args=(Main_ins.l14,))
+        self.version_thread.start()
         Main_ins.l15=QLabel('检查时间:'+str(RwConfig.lasttime))
         layout_update2=QHBoxLayout()
         for i in l13,Main_ins.l14,Main_ins.l15:

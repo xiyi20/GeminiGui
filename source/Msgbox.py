@@ -5,7 +5,6 @@ from PyQt6.QtGui import QIcon,QImage
 from PyQt6.QtCore import Qt,QObject,pyqtSignal,pyqtSlot
 from PyQt6.QtWidgets import QMessageBox,QInputDialog,QFileDialog
 
-
 class MessageBox(QObject):
     messageSignal=pyqtSignal(str)
     connection=None

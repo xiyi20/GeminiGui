@@ -1,7 +1,7 @@
 from PyQt6.QtGui import QIcon
 from PyQt6.QtWidgets import QWidget,QFrame,\
     QMainWindow,QVBoxLayout,QTextEdit
-from Bufflabel import BlurredLabel
+from Blurlabel import BlurredLabel
 
 class HistoryWindow(QMainWindow):
     def __init__(self):

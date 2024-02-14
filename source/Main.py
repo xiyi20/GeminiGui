@@ -24,14 +24,13 @@ class Main:
 
 Main_ins=Main()
 
-app=QApplication(sys.argv)
-
 def getcolor():
     rgb=(random.randint(0,255),random.randint(0,255),random.randint(0,255))
     color="#"+"".join(["{:02x}".format(value) for value in rgb])
     return color
 
 def main():
+    app=QApplication(sys.argv)
     try:
         RwConfig.apikey=Decrypt().decrypt('mh04qE4YbgNW0b/fUWnlFD6kJh09aBEfE9n0IinC/rfBr8IidY41iuPY4jiRMbKj',RwConfig.adminkey)
     except Exception:
@@ -43,7 +42,7 @@ def main():
     Main_ins.m_height=int(app.primaryScreen().size().height()*0.88)
     mainWindow=MainWindow(Main_ins)
     mainWindow.show()
-    SettingWindow.updatethread()
+    SettingWindow.updatethread(self=SettingWindow,Main_ins=Main_ins)
     sys.exit(app.exec())
 
 if __name__=='__main__':

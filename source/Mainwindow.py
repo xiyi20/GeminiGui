@@ -8,7 +8,7 @@ from PyQt6.QtWidgets import QLabel,QWidget,QFrame,\
 from Rwconfig import RwConfig
 from Gemini import Gemini
 from Settingwindow import SettingWindow
-from Bufflabel import BlurredLabel
+from Blurlabel import BlurredLabel
 from Historywindow import HistoryWindow
 
 class MainWindow(QMainWindow):
@@ -23,10 +23,11 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.code=None
         self.state=None
-        self.thread=None
         self.question=None
         self.settingw=None
         self.historyw=None
+        self.answer_thread=None
+        self.img_thread=None
         self.gemini=Gemini()
         self.gemini_visual=Gemini('gemini-pro-vision')
         self.initUI(Main_ins)
@@ -35,13 +36,13 @@ class MainWindow(QMainWindow):
         if MainWindow.img_a is not None:link.setIcon(QIcon('images/elink.png'))
         else:link.setIcon(QIcon('images/link.png'))
     @staticmethod
-    def imagethread():
+    def imagethread(self):
         if MainWindow.img_a is not None:
             MainWindow.img_a=None
             MainWindow.checkimg(MainWindow.link)
             return
-        img_thread=threading.Thread(target=MainWindow.getimage)
-        img_thread.start()
+        self.img_thread=threading.Thread(target=MainWindow.getimage)
+        self.img_thread.start()
     @staticmethod
     def getimage():
         from Msgbox import messagebox
@@ -59,13 +60,14 @@ class MainWindow(QMainWindow):
         self.b2.setEnabled(bool)
         self.b3.setEnabled(bool)
     def closeEvent(self,event):
-        window=[self.settingw,self.historyw]
-        for i in window:
+        windows=[self.settingw,self.historyw]
+        for i in windows:
             if i is not None:
                 i.close()
-        if self.thread is not None:
-            if self.thread.is_alive():
-                self.thread.join()
+        threads=[self.answer_thread,self.img_thread]
+        for i in threads:
+            if i is not None and i.is_alive():
+                i.join()
         event.accept()
     def initUI(self,Main_ins):
         from Main import getcolor
@@ -170,15 +172,15 @@ class MainWindow(QMainWindow):
                 question_text='我:\n'+self.question
                 self.historyw.ta.append(question_text)
                 t2.append(question_text)
-            self.thread=threading.Thread(target=answer,args=(MainWindow.img_a,))
-            self.thread.start()
+            self.answer_thread=threading.Thread(target=answer,args=(MainWindow.img_a,))
+            self.answer_thread.start()
             self.t1.setText('请等待回答...')
             MainWindow.setenable(self,False)
         self.answersignal.connect(sethtml)
         self.clearsignal.connect(lambda:clearcontent(self.t1))
         layout_content=QHBoxLayout()
         self.b2=QPushButton('发送')
-        self.b2.setFont(QFont('正楷',12,500))
+        self.b2.setFont(QFont('新宋体',12,500))
         self.b2.setStyleSheet('border-radius:15px')
         self.b2.setMinimumSize(int(m_width*0.5)-26,int(m_height*0.05))
         self.b2.clicked.connect(answerthread)
@@ -191,7 +193,7 @@ class MainWindow(QMainWindow):
         MainWindow.link.setToolTip('选择图片以使用visual模型')
         MainWindow.link.setStyleSheet('background:rgba(0,0,0,0)')
         self.b3=QPushButton('清空')
-        self.b3.setFont(QFont('正楷',12,500))
+        self.b3.setFont(QFont('新宋体',12,500))
         self.b3.clicked.connect(lambda:clearcontent(t2))
         self.b3.setStyleSheet('border-radius:15px')
         self.b3.setMinimumSize(int(m_width*0.5)-26,int(m_height*0.05))
