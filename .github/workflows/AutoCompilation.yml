@@ -6,10 +6,9 @@ name: AutoCompilation
 on:
   workflow_dispatch:
   push:
-    branches:
-      - main
     paths:
-      - source/
+      - 'source/**'
+      
 
 jobs:
   pyinstaller-build:
