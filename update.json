@@ -1,5 +1,5 @@
 {
-    "version": 2.10,
-    "desc": "修复检查更新的一处bug,修复QBasicTimer报错,优化默认主题效果(建议更新)",
-    "url": "https://github.com/xiyi20/GeminiGui/actions/runs/7898673023/artifacts/1244113425"
+    "version": 2.15,
+    "desc": "修复检查更新的一处bug(闪退),修复QBasicTimer报错,优化默认主题效果(建议更新)",
+    "url": "https://github.com/xiyi20/GeminiGui/actions/runs/7900588185/artifacts/1244495843"
 }
