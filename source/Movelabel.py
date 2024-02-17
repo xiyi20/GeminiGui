@@ -61,6 +61,7 @@ class MoveLabel(QLabel):
             triangle=QPolygonF([p1,p2,p3])
             painter.setBrush(QBrush(QColor(self.color)))  #设置刷子颜色
             painter.drawPolygon(triangle)
+        painter.end()
     def toggleAnimation(self):
         #切换动画的起始值和结束值
         a,b=self.animation.startValue(),self.animation.endValue()
@@ -71,6 +72,7 @@ class MoveLabel(QLabel):
     def animationSpeed(self,speed):
         self.animation.setDuration(self.last_time*speed)
     def startAnimation(self,open,dynamic):
+        QEasingCurve.Type.Linear
         self.animation.setStartValue(self.start_rect)
         self.animation.setEndValue(self.end_rect)
         if open==0:

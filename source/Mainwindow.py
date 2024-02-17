@@ -1,15 +1,40 @@
 import time
 import threading
 from functools import partial
-from PyQt6.QtGui import QFont,QIcon,QTextCursor
+from PyQt6.QtGui import QFont,QIcon,QTextCursor,QAction
 from PyQt6.QtCore import pyqtSignal,Qt
-from PyQt6.QtWidgets import QLabel,QWidget,QFrame,\
+from PyQt6.QtWidgets import QLabel,QWidget,QFrame,QMenu,\
     QMainWindow,QVBoxLayout,QHBoxLayout,QPushButton,QTextEdit
 from Rwconfig import RwConfig
 from Gemini import Gemini
 from Settingwindow import SettingWindow
 from Blurlabel import BlurredLabel
 from Historywindow import HistoryWindow
+
+class CustomMenu(QMenu):
+    def __init__(self,parent,mode):
+        super().__init__()
+        self.parent=parent
+        self.a1=QAction(QIcon('images/selectall.png'),'全选(Ctrl+A)',parent)
+        self.a1.triggered.connect(parent.selectAll)
+        self.a2=QAction(QIcon('images/cut.png'),'剪切(Ctrl+X)',parent)
+        self.a2.triggered.connect(parent.cut)
+        self.a3=QAction(QIcon('images/copy.png'),'复制(Ctrl+C)',parent)
+        self.a3.triggered.connect(parent.copy)
+        self.a4=QAction(QIcon('images/paste.png'),'粘贴(Ctrl+V)',parent)
+        self.a4.triggered.connect(parent.paste)
+        self.a5=QAction(QIcon('images/undo.png'),'撤销(Ctrl+Z)',parent)
+        self.a5.triggered.connect(parent.undo)
+        modelist={1:self.a1,2:self.a2,3:self.a3,4:self.a4,5:self.a5}
+        for i in mode:
+            self.addAction(modelist[i])
+        self.setFixedWidth(105)
+        self.setWindowOpacity(0.5)
+        self.setStyleSheet("Qmenu {background-color:rgba(255,255,255,0.5);border:1px solid white}\
+                           QMenu::item:selected {background-color:grey;}")
+    def setmenu(self):
+        self.parent.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.parent.customContextMenuRequested.connect(lambda pos:self.exec(self.parent.mapToGlobal(pos)))
 
 class MainWindow(QMainWindow):
     link=None
@@ -117,6 +142,7 @@ class MainWindow(QMainWindow):
 
         self.t1=QTextEdit()
         self.t1.setMinimumSize(int(m_width*0.9),int(m_height*0.3))
+        CustomMenu(self.t1,[1,2,3,4,5]).setmenu()
         layout_f1.addWidget(self.t1)
         layout_f1.addStretch(2)
 
@@ -188,7 +214,7 @@ class MainWindow(QMainWindow):
             qt.clear()
         MainWindow.link=QPushButton()
         MainWindow.link.setMaximumSize(24,25)
-        MainWindow.link.clicked.connect(MainWindow.imagethread)
+        MainWindow.link.clicked.connect(lambda:MainWindow.imagethread(self))
         MainWindow.link.setIcon(QIcon('images/link.png'))
         MainWindow.link.setToolTip('选择图片以使用visual模型')
         MainWindow.link.setStyleSheet('background:rgba(0,0,0,0)')
@@ -202,6 +228,7 @@ class MainWindow(QMainWindow):
         layout_f1.addLayout(layout_content)
 
         t2=QTextEdit()
+        CustomMenu(t2,[1,3]).setmenu()
         t2.setReadOnly(True)
         t2.setMinimumSize(int(m_width*0.9),int(m_height*0.5))
     
