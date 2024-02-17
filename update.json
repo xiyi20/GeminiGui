@@ -1,5 +1,5 @@
 {
-    "version": 2.15,
-    "desc": "修复检查更新的一处bug(闪退),修复QBasicTimer报错,优化默认主题效果(建议更新)",
-    "url": "https://github.com/xiyi20/GeminiGui/actions/runs/7900588185/artifacts/1244495843"
+    "version": 2.20,
+    "desc": "修复选择图片闪退,优化右键菜单显示效果(建议更新)",
+    "url": "https://github.com/xiyi20/GeminiGui/actions/runs/7939666115/artifacts/1253148424"
 }
