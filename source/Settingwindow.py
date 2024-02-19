@@ -1,16 +1,14 @@
 import re
-import os
-import sys
 import threading
-import subprocess
-from PyQt6.QtGui import QFont,QIcon
+from PyQt6.QtGui import QFont,QIcon,QCursor
 from PyQt6.QtCore import Qt,QEasingCurve
-from PyQt6.QtWidgets import QLabel,QWidget,QFrame,\
-    QMainWindow,QColorDialog,\
+from PyQt6.QtWidgets import QLabel,QFrame,\
+    QMainWindow,QColorDialog,QToolTip,\
     QVBoxLayout,QHBoxLayout,QPushButton,QCheckBox,\
     QButtonGroup,QRadioButton,QLineEdit,QComboBox
 from Checkupdate import checkupdate
 from Blurlabel import BlurredLabel
+from CustomFrame import CustomBanner
 
 class ColorDialog(QColorDialog):
     def __init__(self):
@@ -21,7 +19,7 @@ class ColorDialog(QColorDialog):
             return self.color.name()
 
 class SettingWindow(QMainWindow):
-    def __init__(self,mwsf,htsf,mwbg,mwlb,mwl1,tq,ta,ba,bc,htbg,htlb,Main_ins):
+    def __init__(self,htsf,mwsf,mwbg,mwlb,mwl1,tq,ta,ba,bc,htbg,htlb,Main_ins):
         super().__init__()
         self.mwsf=mwsf
         self.htsf=htsf
@@ -38,6 +36,9 @@ class SettingWindow(QMainWindow):
         self.version_thread=None
         self.Main_ins=Main_ins
         self.initUI(Main_ins)
+    @staticmethod
+    def showtext(text):
+        QToolTip.showText(QCursor.pos(),text)
     @staticmethod
     def updatethread(self,skip=False,qt=None,Main_ins=None):
         if qt is not None:
@@ -57,10 +58,17 @@ class SettingWindow(QMainWindow):
         from Main import getcolor
         import Main
         self.setWindowTitle('设置') 
-        self.move(Main_ins.m_width+450,80)  
-        self.setFixedSize(400,550)
+        self.move(Main_ins.m_width+450,80)
+        self.setFixedSize(400,535)
         self.setWindowIcon(QIcon('images/setting.png'))
-        center=QWidget(self)
+        self.setStyleSheet('border-radius:15px')
+        self.setWindowFlag(Qt.WindowType.FramelessWindowHint)
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+        center=QFrame(self)
+        center.resize(self.width(),self.height())
+        layout_center=QVBoxLayout(center)
+        layout_center.setSpacing(0)
+        layout_center.setContentsMargins(0,0,0,0)
         shapes=[
             {'type':11,'shape':1,'color':getcolor(),'last_time':6},
             {'type':21,'shape':3,'color':getcolor(),'last_time':5},
@@ -68,11 +76,13 @@ class SettingWindow(QMainWindow):
             {'type':41,'shape':2,'color':getcolor(),'last_time':8},
             {'type':12,'shape':1,'color':getcolor(),'last_time':9},
         ]
-        label=BlurredLabel(self,shapes)
+        label=BlurredLabel(center,shapes)
+        banner=CustomBanner(self,'images/setting.png','设置',[1,3])
+        layout_center.addWidget(banner)
         self.setCentralWidget(center)
 
-        f1=QFrame(self)
-        f1.resize(400,550)
+        f1=QFrame()
+        f1.setStyleSheet('background:rgba(0,0,0,0)')
         layout_f1=QVBoxLayout(f1)
 
         def blur_open(state,num):
@@ -104,7 +114,7 @@ class SettingWindow(QMainWindow):
         t1.setFixedWidth(40)
         b1=QPushButton()
         b1.setIcon(QIcon('images/warm.png'))
-        b1.setToolTip('数字越大性能开销越大!')
+        b1.clicked.connect(lambda:SettingWindow.showtext('数字越大性能开销越大!'))
         b2=QPushButton()
         b2.setIcon(QIcon('images/save.png'))
         b2.clicked.connect(lambda: blur_radius(t1.text()))
@@ -126,13 +136,13 @@ class SettingWindow(QMainWindow):
                     self.mwbg.setStyleSheet('background:'+color)
                     self.htbg.setStyleSheet('background:'+color)
                     center.setStyleSheet('background:'+color)
-                    b3.setStyleSheet(center.styleSheet()+';border-radius:9px')
+                    b3.setStyleSheet(center.styleSheet()+';border-radius:8px')
             else:
                 color=re.findall(Main_ins.find_color,b3.styleSheet())[0]
                 rwconfig.wconfig('window','bg_color',color)
         b19=QPushButton()
         b19.setIcon(QIcon('images/warm.png'))
-        b19.setToolTip('背景色的优先级大于主题样式,更改后注意保存')
+        b19.clicked.connect(lambda:SettingWindow.showtext('背景色的优先级大于主题样式,更改后注意保存'))
         b3=QPushButton()
         b3.setMaximumSize(40,40)
         b3.clicked.connect(setwindowcolor) 
@@ -173,7 +183,7 @@ class SettingWindow(QMainWindow):
                     self.ba.setStyleSheet('background:rgba(255,255,255,0.5);border-radius:15px')
             self.ta.setStyleSheet(self.tq.styleSheet().replace(re.findall(Main_ins.find_radius,self.tq.styleSheet())[0],str(RwConfig.aradius)))
             self.bc.setStyleSheet(self.ba.styleSheet())
-            b3.setStyleSheet(center.styleSheet()+';border-radius:9px')
+            b3.setStyleSheet(center.styleSheet()+';border-radius:8px')
             rwconfig.wconfig('window','theme',color)
         b4=QRadioButton('明亮')
         b4.clicked.connect(settheme)
@@ -244,7 +254,7 @@ class SettingWindow(QMainWindow):
         setopacity(RwConfig.opacity)
         b20=QPushButton()
         b20.setIcon(QIcon('images/tip.png'))
-        b20.setToolTip('数字越小越透明,仅支持0-1')
+        b20.clicked.connect(lambda:SettingWindow.showtext('数字越小越透明,仅支持0-1'))
         b21=QPushButton()
         b21.setIcon(QIcon('images/save.png'))
         b21.clicked.connect(lambda:setopacity(t5.text()))
@@ -288,7 +298,7 @@ class SettingWindow(QMainWindow):
                 messagebox.showmsg('运动速度应为整形(int)')
         b9=QPushButton()
         b9.setIcon(QIcon('images/warm.png'))
-        b9.setToolTip('数字越大运动越慢,建议500-1000')
+        b9.clicked.connect(lambda:SettingWindow.showtext('数字越大运动越慢,建议500-1000'))
         b10=QPushButton()
         b10.setIcon(QIcon('images/save.png'))
         b10.clicked.connect(lambda:setspeed(t4.text()))
@@ -329,10 +339,7 @@ class SettingWindow(QMainWindow):
                 combobox1.setCurrentText(key)
         b11=QPushButton()
         b11.setIcon(QIcon('images/tip.png'))
-        b11.setToolTip(curve_des[combobox1.currentIndex()])
-        def changetip():
-            b11.setToolTip(curve_des[combobox1.currentIndex()])
-        combobox1.currentTextChanged.connect(changetip)
+        b11.clicked.connect(lambda:SettingWindow.showtext(curve_des[combobox1.currentIndex()]))
         b12=QPushButton()
         b12.setIcon(QIcon('images/save.png'))
         b12.clicked.connect(lambda:setdynamic(0,curve_dict[combobox1.currentText()]))
@@ -377,6 +384,8 @@ class SettingWindow(QMainWindow):
             if i==0:layout_update2.addStretch()
             else:layout_update2.addWidget(i)
         b18=QPushButton('检查更新')
+        b18.setMinimumHeight(30)
+        b18.setStyleSheet('background:rgba(255,255,255,0.5);border-radius:10px')
         b18.clicked.connect(lambda:SettingWindow.updatethread(self,True,b18,Main_ins))
         layout_update3=QVBoxLayout()
         layout_update3.addWidget(b18)
@@ -389,12 +398,8 @@ class SettingWindow(QMainWindow):
                 return
             rwconfig.wconfig('gemini','apikey',key)
             RwConfig.apikey=key
-            try:
-                python=sys.executable
-                os.execl(python, 'Gemini.py', *sys.argv)
-            except Exception:
-                os.system("taskkill /f /im Gemini.exe")
-                subprocess.call('Gemini.exe')
+            banner.reboot()
+            
         layout_gemini=QVBoxLayout()
         l17=QLabel('API设置')
         layout_gemini1=QHBoxLayout()
@@ -405,7 +410,7 @@ class SettingWindow(QMainWindow):
         t6.setText(RwConfig.apikey)
         b22=QPushButton()
         b22.setIcon(QIcon('images/warm.png'))
-        b22.setToolTip('保存后将重启程序')
+        b22.clicked.connect(lambda:SettingWindow.showtext('保存后将重启程序'))
         b23=QPushButton()
         b23.setIcon(QIcon('images/save.png'))
         b23.clicked.connect(lambda:setapi(t6.text()))
@@ -434,9 +439,8 @@ class SettingWindow(QMainWindow):
             layout_f1.addLayout(i)
         layout_f1.addStretch(1)
 
+        layout_center.addWidget(f1)
         self.mwbg.setStyleSheet('background:'+RwConfig.bgcolor)
+        self.htbg.setStyleSheet('background:'+RwConfig.bgcolor)
         center.setStyleSheet('background:'+RwConfig.bgcolor)
-        b3.setStyleSheet(center.styleSheet()+';border-radius:9px')
-
-
-
+        b3.setStyleSheet(center.styleSheet()+';border-radius:8px')

@@ -1,40 +1,18 @@
 import time
 import threading
+import threading
 from functools import partial
-from PyQt6.QtGui import QFont,QIcon,QTextCursor,QAction
+from PyQt6.QtGui import QFont,QIcon,QTextCursor
 from PyQt6.QtCore import pyqtSignal,Qt
-from PyQt6.QtWidgets import QLabel,QWidget,QFrame,QMenu,\
-    QMainWindow,QVBoxLayout,QHBoxLayout,QPushButton,QTextEdit
+from PyQt6.QtWidgets import QLabel,QFrame,QMainWindow,\
+    QVBoxLayout,QHBoxLayout,QPushButton,QTextEdit
 from Rwconfig import RwConfig
 from Gemini import Gemini
 from Settingwindow import SettingWindow
 from Blurlabel import BlurredLabel
 from Historywindow import HistoryWindow
+from CustomFrame import CustomBanner,CustomMenu
 
-class CustomMenu(QMenu):
-    def __init__(self,parent,mode):
-        super().__init__()
-        self.parent=parent
-        self.a1=QAction(QIcon('images/selectall.png'),'全选(Ctrl+A)',parent)
-        self.a1.triggered.connect(parent.selectAll)
-        self.a2=QAction(QIcon('images/cut.png'),'剪切(Ctrl+X)',parent)
-        self.a2.triggered.connect(parent.cut)
-        self.a3=QAction(QIcon('images/copy.png'),'复制(Ctrl+C)',parent)
-        self.a3.triggered.connect(parent.copy)
-        self.a4=QAction(QIcon('images/paste.png'),'粘贴(Ctrl+V)',parent)
-        self.a4.triggered.connect(parent.paste)
-        self.a5=QAction(QIcon('images/undo.png'),'撤销(Ctrl+Z)',parent)
-        self.a5.triggered.connect(parent.undo)
-        modelist={1:self.a1,2:self.a2,3:self.a3,4:self.a4,5:self.a5}
-        for i in mode:
-            self.addAction(modelist[i])
-        self.setFixedWidth(105)
-        self.setWindowOpacity(0.5)
-        self.setStyleSheet("Qmenu {background-color:rgba(255,255,255,0.5);border:1px solid white}\
-                           QMenu::item:selected {background-color:grey;}")
-    def setmenu(self):
-        self.parent.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
-        self.parent.customContextMenuRequested.connect(lambda pos:self.exec(self.parent.mapToGlobal(pos)))
 
 class MainWindow(QMainWindow):
     link=None
@@ -97,36 +75,51 @@ class MainWindow(QMainWindow):
     def initUI(self,Main_ins):
         from Main import getcolor
         m_width,m_height=Main_ins.m_width,Main_ins.m_height
+        self.setWindowTitle('Gemini AI')
         self.move(450,20)
-        self.setFixedSize(m_width,m_height)
+        self.setFixedSize(m_width,m_height+30)
         self.setWindowIcon(QIcon('images/Gemini.ico'))
-        center=QWidget(self)
+        self.setStyleSheet('border-radius:15px')
+        self.setWindowFlag(Qt.WindowType.FramelessWindowHint)
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+        center=QFrame(self)
+        center.resize(self.width(),self.height())
+        layout_center=QVBoxLayout(center)
+        layout_center.setSpacing(0)
+        layout_center.setContentsMargins(0,0,0,0)
         shapes=[
             {'type':21,'shape':1,'color':getcolor(),'last_time':6},
-            {'type':22,'shape':1,'color':getcolor(),'last_time':5},
-            {'type':31,'shape':2,'color':getcolor(),'last_time':7},
+            {'type':22,'shape':2,'color':getcolor(),'last_time':5},
+            {'type':31,'shape':3,'color':getcolor(),'last_time':7},
             {'type':41,'shape':3,'color':getcolor(),'last_time':8},
-            {'type':12,'shape':3,'color':getcolor(),'last_time':9},
+            {'type':12,'shape':1,'color':getcolor(),'last_time':9},
         ]
-        label=BlurredLabel(self,shapes)
+        label=BlurredLabel(center,shapes)
+        banner=CustomBanner(self,'images/Gemini.ico','',[1,2,3],True)
+        layout_center.addWidget(banner)
         self.setCentralWidget(center)
-        self.setWindowTitle('Gemini AI')
 
-        f1=QFrame(self)
-        f1.resize(m_width,m_height)
+        f1=QFrame()
+        f1.setStyleSheet('background:rgba(0,0,0,0)')
         layout_f1=QVBoxLayout(f1)
-        
-        def settingwindow():
-            self.settingw.show()
-        def showhistory():
-            self.historyw.show()
+
+        def showwindow(window):
+            window.show()
+            if window.isMinimized():
+                window.showNormal()
+            else:
+                flags=window.windowFlags()
+                handel=window.windowHandle()#通过句柄添加flags避免窗口闪烁
+                handel.setFlags(flags| Qt.WindowType.WindowStaysOnTopHint)
+                handel.setFlag(Qt.WindowType.WindowStaysOnTopHint,False)
+
         layout_top=QHBoxLayout()
         layout_f1.addLayout(layout_top)
         b1=QPushButton()
-        b1.clicked.connect(settingwindow)
+        b1.clicked.connect(lambda:showwindow(self.settingw))
         b1.setIcon(QIcon('images/setting.png'))
         b0=QPushButton()
-        b0.clicked.connect(showhistory)
+        b0.clicked.connect(lambda:showwindow(self.historyw))
         for i in b0,b1:
             i.setStyleSheet('background:rgba(255,255,255,0)')
         b0.setIcon(QIcon('images/history.png'))
@@ -204,7 +197,7 @@ class MainWindow(QMainWindow):
             MainWindow.setenable(self,False)
         self.answersignal.connect(sethtml)
         self.clearsignal.connect(lambda:clearcontent(self.t1))
-        layout_content=QHBoxLayout()
+        layout_button=QHBoxLayout()
         self.b2=QPushButton('发送')
         self.b2.setFont(QFont('新宋体',12,500))
         self.b2.setStyleSheet('border-radius:15px')
@@ -216,7 +209,7 @@ class MainWindow(QMainWindow):
         MainWindow.link.setMaximumSize(24,25)
         MainWindow.link.clicked.connect(lambda:MainWindow.imagethread(self))
         MainWindow.link.setIcon(QIcon('images/link.png'))
-        MainWindow.link.setToolTip('选择图片以使用visual模型')
+        MainWindow.link.clicked.connect(lambda:SettingWindow.showtext('选择图片以使用visual模型'))
         MainWindow.link.setStyleSheet('background:rgba(0,0,0,0)')
         self.b3=QPushButton('清空')
         self.b3.setFont(QFont('新宋体',12,500))
@@ -224,8 +217,8 @@ class MainWindow(QMainWindow):
         self.b3.setStyleSheet('border-radius:15px')
         self.b3.setMinimumSize(int(m_width*0.5)-26,int(m_height*0.05))
         for i in self.b2,MainWindow.link,self.b3:
-            layout_content.addWidget(i)
-        layout_f1.addLayout(layout_content)
+            layout_button.addWidget(i)
+        layout_f1.addLayout(layout_button)
 
         t2=QTextEdit()
         CustomMenu(t2,[1,3]).setmenu()
@@ -236,6 +229,7 @@ class MainWindow(QMainWindow):
             i.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
             i.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         layout_f1.addWidget(t2)
+        layout_center.addWidget(f1)
         MainWindow.checkapi(self)
         self.historyw=HistoryWindow()
         self.settingw=SettingWindow(self,self.historyw,center,label,l1,self.t1,t2,self.b2,self.b3,self.historyw.center,self.historyw.label,Main_ins)  

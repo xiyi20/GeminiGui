@@ -17,7 +17,7 @@ class Main:
     def __init__(self) -> None:
         self.m_width=None
         self.m_height=None
-        self.VERSION=2.20
+        self.VERSION=2.30
         self.l14=None
         self.l15=None
 
