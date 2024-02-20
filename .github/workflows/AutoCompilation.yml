@@ -9,7 +9,6 @@ on:
     paths:
       - 'source/**'
       
-
 jobs:
   pyinstaller-build:
     runs-on: windows-latest
@@ -41,13 +40,22 @@ jobs:
 
       - name: Move Files
         run: |
-          mkdir temp\GeminiAI
-          move source\dist\Gemini.exe temp\GeminiAI\Gemini.exe
-          move images temp\GeminiAI\images
-          move config.json temp\GeminiAI\config.json
+          mkdir temp1\GeminiAI
+          copy source\dist\Gemini.exe temp1\GeminiAI\Gemini.exe
+          copy images temp1\GeminiAI\images
+          copy config.json temp1\GeminiAI\config.json
+          mkdir temp2\SourceCode
+          copy source temp2\SourceCode\source
+          copy images temp2\SourceCode\images
 
-      - name: Upload artifacts
+      - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: Gemini-Artifacts
-          path: temp
+          path: temp1
+
+      - name: Upload SourceCode
+        uses: actions/upload-artifact@v4
+        with:
+          name: SourceCode
+          path: temp2
