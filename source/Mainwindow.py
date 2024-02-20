@@ -1,9 +1,13 @@
 import time
 import threading
 import threading
+import threading
 from functools import partial
 from PyQt6.QtGui import QFont,QIcon,QTextCursor
+from PyQt6.QtGui import QFont,QIcon,QTextCursor
 from PyQt6.QtCore import pyqtSignal,Qt
+from PyQt6.QtWidgets import QLabel,QFrame,QMainWindow,\
+    QVBoxLayout,QHBoxLayout,QPushButton,QTextEdit
 from PyQt6.QtWidgets import QLabel,QFrame,QMainWindow,\
     QVBoxLayout,QHBoxLayout,QPushButton,QTextEdit
 from Rwconfig import RwConfig
@@ -11,6 +15,8 @@ from Gemini import Gemini
 from Settingwindow import SettingWindow
 from Blurlabel import BlurredLabel
 from Historywindow import HistoryWindow
+from CustomFrame import CustomBanner,CustomMenu
+
 from CustomFrame import CustomBanner,CustomMenu
 
 
@@ -76,9 +82,19 @@ class MainWindow(QMainWindow):
         from Main import getcolor
         m_width,m_height=Main_ins.m_width,Main_ins.m_height
         self.setWindowTitle('Gemini AI')
+        self.setWindowTitle('Gemini AI')
         self.move(450,20)
         self.setFixedSize(m_width,m_height+30)
+        self.setFixedSize(m_width,m_height+30)
         self.setWindowIcon(QIcon('images/Gemini.ico'))
+        self.setStyleSheet('border-radius:15px')
+        self.setWindowFlag(Qt.WindowType.FramelessWindowHint)
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+        center=QFrame(self)
+        center.resize(self.width(),self.height())
+        layout_center=QVBoxLayout(center)
+        layout_center.setSpacing(0)
+        layout_center.setContentsMargins(0,0,0,0)
         self.setStyleSheet('border-radius:15px')
         self.setWindowFlag(Qt.WindowType.FramelessWindowHint)
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
@@ -91,9 +107,15 @@ class MainWindow(QMainWindow):
             {'type':21,'shape':1,'color':getcolor(),'last_time':6},
             {'type':22,'shape':2,'color':getcolor(),'last_time':5},
             {'type':31,'shape':3,'color':getcolor(),'last_time':7},
+            {'type':22,'shape':2,'color':getcolor(),'last_time':5},
+            {'type':31,'shape':3,'color':getcolor(),'last_time':7},
             {'type':41,'shape':3,'color':getcolor(),'last_time':8},
             {'type':12,'shape':1,'color':getcolor(),'last_time':9},
+            {'type':12,'shape':1,'color':getcolor(),'last_time':9},
         ]
+        label=BlurredLabel(center,shapes)
+        banner=CustomBanner(self,'images/Gemini.ico','',[1,2,3],True)
+        layout_center.addWidget(banner)
         label=BlurredLabel(center,shapes)
         banner=CustomBanner(self,'images/Gemini.ico','',[1,2,3],True)
         layout_center.addWidget(banner)
@@ -101,7 +123,20 @@ class MainWindow(QMainWindow):
 
         f1=QFrame()
         f1.setStyleSheet('background:rgba(0,0,0,0)')
+        f1=QFrame()
+        f1.setStyleSheet('background:rgba(0,0,0,0)')
         layout_f1=QVBoxLayout(f1)
+
+        def showwindow(window):
+            window.show()
+            if window.isMinimized():
+                window.showNormal()
+            else:
+                flags=window.windowFlags()
+                handel=window.windowHandle()#通过句柄添加flags避免窗口闪烁
+                handel.setFlags(flags| Qt.WindowType.WindowStaysOnTopHint)
+                handel.setFlag(Qt.WindowType.WindowStaysOnTopHint,False)
+
 
         def showwindow(window):
             window.show()
@@ -117,8 +152,10 @@ class MainWindow(QMainWindow):
         layout_f1.addLayout(layout_top)
         b1=QPushButton()
         b1.clicked.connect(lambda:showwindow(self.settingw))
+        b1.clicked.connect(lambda:showwindow(self.settingw))
         b1.setIcon(QIcon('images/setting.png'))
         b0=QPushButton()
+        b0.clicked.connect(lambda:showwindow(self.historyw))
         b0.clicked.connect(lambda:showwindow(self.historyw))
         for i in b0,b1:
             i.setStyleSheet('background:rgba(255,255,255,0)')
