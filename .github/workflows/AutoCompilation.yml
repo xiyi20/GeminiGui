@@ -31,6 +31,12 @@ jobs:
           pip install markdown
           pip install pillow
           pip install pyqt6
+      
+      - name: Move Files(Code)
+        run: |
+          mkdir temp1\SourceCode
+          copy source temp1\SourceCode\source
+          copy images temp1\SourceCode\images
 
       - name: Create Executable
         run: |
@@ -38,24 +44,21 @@ jobs:
           pyinstaller --onefile --windowed --icon '..\images\Gemini.ico' Gemini.py Blurlabel.py Checkupdate.py Decrypt.py Historywindow.py Main.py MainWindow.py MoveLabel.py Msgbox.py Rwconfig.py SettingWindow.py CustomFrame.py
           cd ..
 
-      - name: Move Files
+      - name: Move Files(Gemini)
         run: |
-          mkdir temp1\GeminiAI
-          copy source\dist\Gemini.exe temp1\GeminiAI\Gemini.exe
-          copy images temp1\GeminiAI\images
-          copy config.json temp1\GeminiAI\config.json
-          mkdir temp2\SourceCode
-          copy source temp2\SourceCode\source
-          copy images temp2\SourceCode\images
+          mkdir temp2\GeminiAI
+          copy source\dist\Gemini.exe temp2\GeminiAI\Gemini.exe
+          copy images temp2\GeminiAI\images
+          copy config.json temp2\GeminiAI\config.json
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: Gemini-Artifacts
-          path: temp1
+          path: temp2
 
       - name: Upload SourceCode
         uses: actions/upload-artifact@v4
         with:
           name: SourceCode
-          path: temp2
+          path: temp1
