@@ -11,28 +11,28 @@ class MoveLabel(QLabel):
         self.shape=shape
         self.last_time=last_time
         self.color=color
-        if type==11:
+        if type==11:#↘
             self.start_rect=QRectF(0,0,self.width(),self.height())
             self.end_rect=QRectF(self.parent().width()-self.side_width,self.parent().height()-self.side_width,self.side_width,self.side_width)
-        elif type==12:
+        elif type==12:#↖
             self.start_rect=QRectF(parent.width()-self.side_width,parent.height()-self.side_width,self.side_width,self.side_width)
             self.end_rect=QRectF(0,0,self.width(),self.height())
-        elif type==21:
+        elif type==21:#↓
             self.start_rect=QRectF((parent.width()-self.side_width)//2,0,self.side_width,self.side_width)
             self.end_rect=QRectF((parent.width()-self.side_width)//2,parent.height()-self.side_width,self.side_width,self.side_width)
-        elif type==22:
+        elif type==22:#↑
             self.start_rect=QRectF((parent.width()-self.side_width)//2,parent.height()-self.side_width,self.side_width,self.side_width)
             self.end_rect=QRectF((parent.width()-self.side_width)//2,0,self.side_width,self.side_width)
-        elif type==31:
-            self.start_rect=QRectF(parent.width()-self.side_width,0,self.side_width,self.side_width)
-            self.end_rect= QRectF(0,parent.height()-self.side_width,self.side_width,self.side_width)
-        elif type==32:
-            self.start_rect=QRectF(0,parent.height()-self.side_width,self.side_width,self.side_width)
-            self.end_rect=QRectF(parent.width()-self.side_width,0,self.side_width,self.side_width)
-        elif type==41:
+        elif type==31:#↙
+            self.start_rect=QRectF(parent.width()-self.side_width-10,10,self.side_width,self.side_width)
+            self.end_rect= QRectF(10,parent.height()-self.side_width-10,self.side_width,self.side_width)
+        elif type==32:#↗
+            self.start_rect=QRectF(10,parent.height()-self.side_width-10,self.side_width,self.side_width)
+            self.end_rect=QRectF(parent.width()-self.side_width-10,10,self.side_width,self.side_width)
+        elif type==41:#←
             self.start_rect=QRectF(parent.width()-self.side_width,(parent.height()-self.side_width)//2,self.side_width,self.side_width)
             self.end_rect=QRectF(0,(parent.height()-self.side_width)//2,self.side_width,self.side_width)
-        elif type==42:
+        elif type==42:#→
             self.start_rect=QRectF(0,(parent.height()-self.side_width)//2,self.side_width,self.side_width)
             self.end_rect=QRectF(parent.width()-self.side_width,(parent.height()-self.side_width)//2,self.side_width,self.side_width)
         self.animation=QPropertyAnimation(self,b'geometry')

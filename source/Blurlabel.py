@@ -1,3 +1,4 @@
+from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QLabel,QGraphicsBlurEffect
 from Rwconfig import RwConfig
 from Movelabel import MoveLabel
@@ -5,6 +6,8 @@ from Movelabel import MoveLabel
 class BlurredLabel(QLabel):
     def __init__(self,parent=None,items=[]):
         super().__init__(parent)
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+        self.setStyleSheet('background:rgba(0,0,0,0)')
         self.setGeometry(0,0,parent.width(),parent.height())
         for item in items:
             type=item.get('type',11)
