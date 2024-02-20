@@ -50,24 +50,28 @@ class CustomBanner(QFrame):
         if self.enlarge:icon.setIconSize(QSize(20,20))
         name=QLabel(self.name)
 
-        def modifyicon(qt,icon,event):
+        def modifyicon(qt,icon,text,event):
             qt.setIcon(QIcon(icon))
+            if text is not None:
+                from Settingwindow import SettingWindow
+                SettingWindow.showtext(text)
             event.accept()
+
         mini=QPushButton()
         mini.setIcon(QIcon('images/mini1.png'))
         mini.clicked.connect(self.parent.showMinimized)
-        mini.leaveEvent=lambda event:modifyicon(mini,'images/mini1.png',event)
-        mini.enterEvent=lambda event:modifyicon(mini,'images/mini.png',event)
+        mini.leaveEvent=lambda event:modifyicon(mini,'images/mini1.png',None,event)
+        mini.enterEvent=lambda event:modifyicon(mini,'images/mini.png','最小化',event)
         reboot=QPushButton()
         reboot.setIcon(QIcon('images/reboot1.png'))
         reboot.clicked.connect(self.reboot)
-        reboot.leaveEvent=lambda event:modifyicon(reboot,'images/reboot1.png',event)
-        reboot.enterEvent=lambda event:modifyicon(reboot,'images/reboot.png',event)
+        reboot.leaveEvent=lambda event:modifyicon(reboot,'images/reboot1.png',None,event)
+        reboot.enterEvent=lambda event:modifyicon(reboot,'images/reboot.png','重启程序',event)
         close=QPushButton()
         close.setIcon(QIcon('images/close1.png'))
         close.clicked.connect(self.parent.close)
-        close.leaveEvent=lambda event:modifyicon(close,'images/close1.png',event)
-        close.enterEvent=lambda event:modifyicon(close,'images/close.png',event)
+        close.leaveEvent=lambda event:modifyicon(close,'images/close1.png',None,event)
+        close.enterEvent=lambda event:modifyicon(close,'images/close.png','关闭',event)
 
         mode_list={1:mini,2:reboot,3:close}
         layout_banner.addSpacing(5)

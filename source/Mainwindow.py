@@ -1,6 +1,5 @@
 import time
 import threading
-import threading
 from functools import partial
 from PyQt6.QtGui import QFont,QIcon,QTextCursor
 from PyQt6.QtCore import pyqtSignal,Qt
@@ -209,7 +208,7 @@ class MainWindow(QMainWindow):
         MainWindow.link.setMaximumSize(24,25)
         MainWindow.link.clicked.connect(lambda:MainWindow.imagethread(self))
         MainWindow.link.setIcon(QIcon('images/link.png'))
-        MainWindow.link.clicked.connect(lambda:SettingWindow.showtext('选择图片以使用visual模型'))
+        MainWindow.link.enterEvent=lambda event:SettingWindow.showtext('选择图片以使用visual模型')
         MainWindow.link.setStyleSheet('background:rgba(0,0,0,0)')
         self.b3=QPushButton('清空')
         self.b3.setFont(QFont('新宋体',12,500))
