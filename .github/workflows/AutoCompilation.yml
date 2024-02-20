@@ -36,14 +36,14 @@ jobs:
       - name: Move Files(Code)
         run: |
           mkdir temp\SourceCode
-          copy source temp\SourceCode\source
+          copy source\* temp\SourceCode\source
           copy images temp\SourceCode\images
-      
+
       - name: Upload SourceCode
         uses: actions/upload-artifact@v4
         with:
           name: SourceCode
-          path: temp
+          path: temp\SourceCode
 
       - name: Create Executable
         run: |
@@ -53,7 +53,7 @@ jobs:
 
       - name: Move Files(Gemini)
         run: |
-          rmdir /s /q temp
+          rmdir /s temp
           mkdir temp\GeminiAI
           copy source\dist\Gemini.exe temp\GeminiAI\Gemini.exe
           copy images temp\GeminiAI\images
