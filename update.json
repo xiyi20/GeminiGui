@@ -1,5 +1,5 @@
 {
-    "version": 2.20,
-    "desc": "修复选择图片闪退,优化右键菜单显示效果(建议更新)",
-    "url": "https://github.com/xiyi20/GeminiGui/actions/runs/7939666115/artifacts/1253148424"
+    "version": 2.35,
+    "desc": "去除系统边框,使用自定义边框,动画路线微调,优化悬停文本显示逻辑,修改提示文字显示逻辑(强烈建议更新)",
+    "url": "https://github.com/xiyi20/GeminiGui/actions/runs/7971779481/artifacts/1258975360"
 }
