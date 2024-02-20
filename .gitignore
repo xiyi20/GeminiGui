@@ -2,3 +2,4 @@ demo.py
 config.json
 __pycache__
 source/__pycache__
+demo/
