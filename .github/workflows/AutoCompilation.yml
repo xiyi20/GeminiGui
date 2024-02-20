@@ -33,7 +33,7 @@ jobs:
           pip install pillow
           pip install pyqt6
       
-      - name: Move Files(Code)
+      - name: Init Files(Code)
         run: |
           mkdir temp1\SourceCode\source
           mkdir temp1\SourceCode\images
@@ -52,11 +52,12 @@ jobs:
           pyinstaller --onefile --windowed --icon '..\images\Gemini.ico' Gemini.py Blurlabel.py Checkupdate.py Decrypt.py Historywindow.py Main.py MainWindow.py MoveLabel.py Msgbox.py Rwconfig.py SettingWindow.py CustomFrame.py
           cd ..
 
-      - name: Move Files(Gemini)
+      - name: Init Files(Gemini)
         run: |
           mkdir temp2\GeminiAI
+          mkdir temp2\GeminiAI\images
           copy source\dist\Gemini.exe temp2\GeminiAI\Gemini.exe
-          copy images temp2\GeminiAI\images
+          copy images\* temp2\GeminiAI\images
           copy config.json temp2\GeminiAI\config.json
 
       - name: Upload Artifacts
