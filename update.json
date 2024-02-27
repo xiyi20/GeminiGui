@@ -1,5 +1,5 @@
 {
-    "version": 2.35,
-    "desc": "去除系统边框,使用自定义边框,动画路线微调,优化悬停文本显示逻辑,修改提示文字显示逻辑(强烈建议更新)",
-    "url": "https://github.com/xiyi20/GeminiGui/actions/runs/7971779481/artifacts/1258975360"
+    "version": 2.40,
+    "desc": "优化程序导包逻辑,加入窗口动画,修改线程使用(强烈建议更新)",
+    "url": "https://github.com/xiyi20/GeminiGui/actions/runs/8063900037/artifacts/1278463934"
 }
