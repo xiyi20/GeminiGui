@@ -1,14 +1,13 @@
 import re
-import threading
 from PyQt6.QtGui import QFont,QIcon,QCursor
 from PyQt6.QtCore import Qt,QEasingCurve
 from PyQt6.QtWidgets import QLabel,QFrame,\
     QMainWindow,QColorDialog,QToolTip,\
     QVBoxLayout,QHBoxLayout,QPushButton,QCheckBox,\
     QButtonGroup,QRadioButton,QLineEdit,QComboBox
-from Checkupdate import checkupdate
-from Blurlabel import BlurredLabel
-from CustomFrame import CustomBanner
+from Rwconfig import rwconfig
+from Msgbox import messagebox
+import Main
 
 class ColorDialog(QColorDialog):
     def __init__(self):
@@ -35,28 +34,21 @@ class SettingWindow(QMainWindow):
         self.update_thread=None
         self.version_thread=None
         self.Main_ins=Main_ins
+        from CustomFrame import CustomAnimation
+        self.animation=CustomAnimation(self)
+        self.setWindowOpacity(0)
         self.initUI(Main_ins)
     @staticmethod
     def showtext(text):
         QToolTip.showText(QCursor.pos(),text)
-    @staticmethod
-    def updatethread(self,skip=False,qt=None,Main_ins=None):
-        if qt is not None:
-            qt.setText('正在检查...')
-            qt.setEnabled(False)
-        self.update_thread=threading.Thread(target=checkupdate.check,args=(skip,qt,Main_ins))
-        self.update_thread.start()
-    def closeEvent(self,event):
+    def closewindow(self):
+        from Rwconfig import rwconfig
         threads=[self.update_thread,self.version_thread]
         for i in threads:
-            if i is not None and i.is_alive():
-                i.join()
-        event.accept()
+            if i is not None and i.isRunning():
+                i.quit()
+        self.animation.setanimation(rwconfig.opacity,0,500,slot=self.close)
     def initUI(self,Main_ins):
-        from Msgbox import messagebox
-        from Rwconfig import RwConfig,rwconfig
-        from Main import getcolor
-        import Main
         self.setWindowTitle('设置') 
         self.move(Main_ins.m_width+450,80)
         self.setFixedSize(400,535)
@@ -69,6 +61,7 @@ class SettingWindow(QMainWindow):
         layout_center=QVBoxLayout(center)
         layout_center.setSpacing(0)
         layout_center.setContentsMargins(0,0,0,0)
+        from Main import getcolor
         shapes=[
             {'type':11,'shape':1,'color':getcolor(),'last_time':6},
             {'type':21,'shape':3,'color':getcolor(),'last_time':5},
@@ -76,8 +69,10 @@ class SettingWindow(QMainWindow):
             {'type':41,'shape':2,'color':getcolor(),'last_time':8},
             {'type':12,'shape':1,'color':getcolor(),'last_time':9},
         ]
+        from Blurlabel import BlurredLabel
         label=BlurredLabel(center,shapes)
-        banner=CustomBanner(self,'images/setting.png','设置',[1,3])
+        from CustomFrame import CustomBanner
+        banner=CustomBanner(self,'images/setting.png','设置',[1,4])
         layout_center.addWidget(banner)
         self.setCentralWidget(center)
 
@@ -103,14 +98,14 @@ class SettingWindow(QMainWindow):
         layout_blur=QVBoxLayout()
         l1=QLabel('模糊设置')
         cb1=QCheckBox('取消模糊')
-        if RwConfig.blopen==2:
+        if rwconfig.blopen==2:
             cb1.setChecked(True)
         else:cb1.setChecked(False)
-        cb1.stateChanged.connect(lambda state: blur_open(state,RwConfig.blradius))
+        cb1.stateChanged.connect(lambda state: blur_open(state,rwconfig.blradius))
         layout_blur1=QHBoxLayout()
         l2=QLabel('模糊程度:')
         t1=QLineEdit()
-        t1.setText(str(RwConfig.blradius))
+        t1.setText(str(rwconfig.blradius))
         t1.setFixedWidth(40)
         b1=QPushButton()
         b1.setIcon(QIcon('images/warm.png'))
@@ -166,22 +161,22 @@ class SettingWindow(QMainWindow):
                 center.setStyleSheet('background:white')
                 color1='rgba(215,215,215,0.3)'
                 color2='rgba(5,5,5,0.5)'
-                self.tq.setStyleSheet(f'background:{color1};border-radius:{RwConfig.qradius}px')  
+                self.tq.setStyleSheet(f'background:{color1};border-radius:{rwconfig.qradius}px')  
                 self.ba.setStyleSheet(f'background:{color1};border-radius:15px;color:{color2}')
             else:
                 if color=='white':
                     self.mwl1.setStyleSheet('color:black')
                     self.mwbg.setStyleSheet('background:white')
                     center.setStyleSheet('background:white')
-                    self.tq.setStyleSheet(f'background:rgba(255,255,255,0.5);border-radius:{RwConfig.qradius}px')
+                    self.tq.setStyleSheet(f'background:rgba(255,255,255,0.5);border-radius:{rwconfig.qradius}px')
                     self.ba.setStyleSheet('background:rgba(200,200,200,0.5);border-radius:15px')
                 else:
                     self.mwl1.setStyleSheet('color:white')
                     self.mwbg.setStyleSheet('background:black')
                     center.setStyleSheet('background:black')
-                    self.tq.setStyleSheet(f'background:rgba(255,255,255,0.5);border-radius:{RwConfig.qradius}px')
+                    self.tq.setStyleSheet(f'background:rgba(255,255,255,0.5);border-radius:{rwconfig.qradius}px')
                     self.ba.setStyleSheet('background:rgba(255,255,255,0.5);border-radius:15px')
-            self.ta.setStyleSheet(self.tq.styleSheet().replace(re.findall(Main_ins.find_radius,self.tq.styleSheet())[0],str(RwConfig.aradius)))
+            self.ta.setStyleSheet(self.tq.styleSheet().replace(re.findall(Main_ins.find_radius,self.tq.styleSheet())[0],str(rwconfig.aradius)))
             self.bc.setStyleSheet(self.ba.styleSheet())
             b3.setStyleSheet(center.styleSheet()+';border-radius:8px')
             rwconfig.wconfig('window','theme',color)
@@ -194,8 +189,8 @@ class SettingWindow(QMainWindow):
         for i in l5,b6,b4,b5:
             if i!=l5:btg1.addButton(i)
             layout_window2.addWidget(i)
-        if RwConfig.bgtheme=='default':b6.click()
-        elif RwConfig.bgtheme=='white':b4.click()
+        if rwconfig.bgtheme=='default':b6.click()
+        elif rwconfig.bgtheme=='white':b4.click()
         else:b5.click()
 
         def setradius(zone,qt,num):
@@ -206,15 +201,15 @@ class SettingWindow(QMainWindow):
                 style=str(style).replace(patten,num)
                 qt.setStyleSheet(style)
                 rwconfig.wconfig('window',zone,a)
-                if qt==self.tq:RwConfig.qradius=a
-                else:RwConfig.aradius=a
+                if qt==self.tq:rwconfig.qradius=a
+                else:rwconfig.aradius=a
             except ValueError:
                 messagebox.showmsg('圆角应为整形(int)')
         layout_window3=QHBoxLayout()
         l6=QLabel('输入框圆角:')
         t2=QLineEdit()
         t2.setFixedWidth(40)
-        t2.setText(str(RwConfig.qradius))
+        t2.setText(str(rwconfig.qradius))
         b7=QPushButton()
         b7.setIcon(QIcon('images/save.png'))
         b7.clicked.connect(lambda:setradius('q_radius',self.tq,t2.text()))
@@ -227,7 +222,7 @@ class SettingWindow(QMainWindow):
         l7=QLabel('回答框圆角:')
         t3=QLineEdit()
         t3.setFixedWidth(40)
-        t3.setText(str(RwConfig.aradius))
+        t3.setText(str(rwconfig.aradius))
         b8=QPushButton()
         b8.setIcon(QIcon('images/save.png'))
         b8.clicked.connect(lambda:setradius('a_radius',self.ta,t3.text()))
@@ -250,8 +245,8 @@ class SettingWindow(QMainWindow):
         l16=QLabel('窗口透明度:')
         t5=QLineEdit()
         t5.setFixedWidth(40)
-        t5.setText(str(RwConfig.opacity))
-        setopacity(RwConfig.opacity)
+        t5.setText(str(rwconfig.opacity))
+        setopacity(rwconfig.opacity)
         b20=QPushButton()
         b20.setIcon(QIcon('images/tip.png'))
         b20.enterEvent=lambda event:SettingWindow.showtext('数字越小越透明,仅支持0-1')
@@ -272,27 +267,30 @@ class SettingWindow(QMainWindow):
         def setdynamic(state,curve):
             if state==2:
                 for i in Main.ml:
-                    i.startAnimation(state,None)
+                    for j in i:
+                        j.startAnimation(state,None)
             else:
                 for i in Main.ml:
-                    i.startAnimation(state,curve)
+                    for j in i:
+                        j.startAnimation(state,curve)
                     rwconfig.wconfig('dynamic','curve','QEasingCurve.'+str(curve_dict[combobox1.currentText()]))
             rwconfig.wconfig('dynamic','open',state)
         cb2=QCheckBox('关闭动效')
-        if RwConfig.dnopen==2:
+        if rwconfig.dnopen==2:
             cb2.setChecked(True)
         else:cb2.setChecked(False)
-        cb2.stateChanged.connect(lambda state:setdynamic(state,eval(RwConfig.dncurve)))
+        cb2.stateChanged.connect(lambda state:setdynamic(state,eval(rwconfig.dncurve)))
         layout_dynamic1=QHBoxLayout()
         l9=QLabel('运动速度:')
         t4=QLineEdit()
         t4.setFixedWidth(40)
-        t4.setText(str(RwConfig.dnspeed))
+        t4.setText(str(rwconfig.dnspeed))
         def setspeed(num):
             try:
                 a=int(num)
                 for i in Main.ml:
-                    i.animationSpeed(a)
+                    for j in i:
+                        j.animationSpeed(a)
                 rwconfig.wconfig('dynamic','speed',a)
             except ValueError:
                 messagebox.showmsg('运动速度应为整形(int)')
@@ -335,7 +333,7 @@ class SettingWindow(QMainWindow):
         combobox1=QComboBox()
         for key,value in curve_dict.items():
             combobox1.addItem(key)
-            if str(value)==RwConfig.dncurve[13:]:
+            if str(value)==rwconfig.dncurve[13:]:
                 combobox1.setCurrentText(key)
         b11=QPushButton()
         b11.setIcon(QIcon('images/tip.png'))
@@ -361,7 +359,7 @@ class SettingWindow(QMainWindow):
         combobox2=QComboBox()
         for key,value in interval_dict.items():
             combobox2.addItem(key)
-            if value==RwConfig.interval:combobox2.setCurrentText(key)
+            if value==rwconfig.interval:combobox2.setCurrentText(key)
         b14=QPushButton()
         b14.setIcon(QIcon('images/save.png'))
         b14.clicked.connect(lambda:setinterval(interval_dict[combobox2.currentText()]))
@@ -370,23 +368,22 @@ class SettingWindow(QMainWindow):
             else:layout_update1.addWidget(i)
 
         l13=QLabel('当前版本:'+str(Main_ins.VERSION))
-        def setnewversion(qt):
-            newversion=checkupdate.getdata()
-            if newversion is None:result='检查失败!'
-            else:result=str(newversion['version'])
-            qt.setText('云端版本:'+result)
         Main_ins.l14=QLabel('云端版本:未知')
-        self.version_thread=threading.Thread(target=setnewversion,args=(Main_ins.l14,))
+        from Threads import VersionThread
+        self.version_thread=VersionThread(Main_ins.l14)
         self.version_thread.start()
-        Main_ins.l15=QLabel('检查时间:'+str(RwConfig.lasttime))
+        Main_ins.l15=QLabel('检查时间:'+str(rwconfig.lasttime))
         layout_update2=QHBoxLayout()
         for i in l13,Main_ins.l14,Main_ins.l15:
             if i==0:layout_update2.addStretch()
             else:layout_update2.addWidget(i)
+        
         b18=QPushButton('检查更新')
         b18.setMinimumHeight(30)
         b18.setStyleSheet('background:rgba(255,255,255,0.5);border-radius:10px')
-        b18.clicked.connect(lambda:SettingWindow.updatethread(self,True,b18,Main_ins))
+        from Threads import UpdateThread
+        self.update_thread=UpdateThread(True,b18,Main_ins)
+        b18.clicked.connect(lambda:self.update_thread.start())
         layout_update3=QVBoxLayout()
         layout_update3.addWidget(b18)
         for i in l11,layout_update1,layout_update2,layout_update3:
@@ -397,7 +394,7 @@ class SettingWindow(QMainWindow):
                 messagebox.showmsg('APIKEY不能为空')
                 return
             rwconfig.wconfig('gemini','apikey',key)
-            RwConfig.apikey=key
+            rwconfig.apikey=key
             banner.reboot()
             
         layout_gemini=QVBoxLayout()
@@ -407,7 +404,7 @@ class SettingWindow(QMainWindow):
         t6=QLineEdit()
         t6.setFixedWidth(275)
         t6.setPlaceholderText('请在此填写您的APIKEY')
-        t6.setText(RwConfig.apikey)
+        t6.setText(rwconfig.apikey)
         b22=QPushButton()
         b22.setIcon(QIcon('images/warm.png'))
         b22.enterEvent=lambda event:SettingWindow.showtext('保存后将重启程序')
@@ -440,7 +437,7 @@ class SettingWindow(QMainWindow):
         layout_f1.addStretch(1)
 
         layout_center.addWidget(f1)
-        self.mwbg.setStyleSheet('background:'+RwConfig.bgcolor)
-        self.htbg.setStyleSheet('background:'+RwConfig.bgcolor)
-        center.setStyleSheet('background:'+RwConfig.bgcolor)
+        self.mwbg.setStyleSheet('background:'+rwconfig.bgcolor)
+        self.htbg.setStyleSheet('background:'+rwconfig.bgcolor)
+        center.setStyleSheet('background:'+rwconfig.bgcolor)
         b3.setStyleSheet(center.styleSheet()+';border-radius:8px')

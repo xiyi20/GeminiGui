@@ -2,10 +2,6 @@ import re
 import sys
 import random
 from PyQt6.QtWidgets import QApplication
-from Rwconfig import RwConfig
-from Decrypt import Decrypt
-from Mainwindow import MainWindow
-from Settingwindow import SettingWindow
 
 ml=[]
 config=None
@@ -15,9 +11,9 @@ class Main:
     find_text=re.compile(r'text: "(.*?)"')
     find_color=re.compile(r'background:(.*?);')
     def __init__(self) -> None:
+        self.VERSION=2.40
         self.m_width=None
         self.m_height=None
-        self.VERSION=2.35
         self.l14=None
         self.l15=None
 
@@ -30,18 +26,23 @@ def getcolor():
 
 def main():
     app=QApplication(sys.argv)
+    from Rwconfig import rwconfig
+    from Decrypt import Decrypt
+    from Msgbox import messagebox
+    from Mainwindow import MainWindow
+    from Threads import UpdateThread
     try:
-        RwConfig.apikey=Decrypt().decrypt('mh04qE4YbgNW0b/fUWnlFD6kJh09aBEfE9n0IinC/rfBr8IidY41iuPY4jiRMbKj',RwConfig.adminkey)
+        rwconfig.apikey=Decrypt().decrypt('mh04qE4YbgNW0b/fUWnlFD6kJh09aBEfE9n0IinC/rfBr8IidY41iuPY4jiRMbKj',rwconfig.adminkey)
     except Exception:
         pass
-    if RwConfig.apikey=='':
-        from Msgbox import messagebox
+    if rwconfig.apikey=='':
         messagebox.showdialog()
     Main_ins.m_width=int(app.primaryScreen().size().width()*0.4)
     Main_ins.m_height=int(app.primaryScreen().size().height()*0.88)
     mainWindow=MainWindow(Main_ins)
+    update_thread=UpdateThread(Main_ins=Main_ins)
     mainWindow.show()
-    SettingWindow.updatethread(self=SettingWindow,Main_ins=Main_ins)
+    update_thread.start()
     sys.exit(app.exec())
 
 if __name__=='__main__':

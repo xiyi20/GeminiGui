@@ -29,9 +29,9 @@ class MessageBox(QObject):
         if mode=='input':
             api,ok=QInputDialog.getText(None,'提示','输入你的apikey:')  
             if ok:
-                from Rwconfig import RwConfig,rwconfig
+                from Rwconfig import rwconfig
                 rwconfig.wconfig('gemini','apikey',api)
-                RwConfig.apikey=api
+                rwconfig.apikey=api
             else:sys.exit()
         if mode=='file':
             from Mainwindow import MainWindow

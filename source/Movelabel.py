@@ -1,44 +1,47 @@
 from PyQt6.QtGui import QPainter,QBrush,QColor,QPolygonF
 from PyQt6.QtWidgets import QLabel
 from PyQt6.QtCore import QRectF,QPointF,QPropertyAnimation,QEasingCurve
-from Rwconfig import RwConfig
 
 class MoveLabel(QLabel):
     def __init__(self,parent,type,shape,color,last_time):
         super().__init__(parent)
         self.side_width=min(parent.width(),parent.height()) // 2  #设置半径为父类宽高最小值的一半
         self.setGeometry(0,0,self.side_width,self.side_width)
+        self.type=type
         self.shape=shape
         self.last_time=last_time
         self.color=color
-        if type==11:#↘
+        self.initUI(parent)
+    def initUI(self,parent):
+        if self.type==11:#↘
             self.start_rect=QRectF(0,0,self.width(),self.height())
             self.end_rect=QRectF(self.parent().width()-self.side_width,self.parent().height()-self.side_width,self.side_width,self.side_width)
-        elif type==12:#↖
+        elif self.type==12:#↖
             self.start_rect=QRectF(parent.width()-self.side_width,parent.height()-self.side_width,self.side_width,self.side_width)
             self.end_rect=QRectF(0,0,self.width(),self.height())
-        elif type==21:#↓
+        elif self.type==21:#↓
             self.start_rect=QRectF((parent.width()-self.side_width)//2,0,self.side_width,self.side_width)
             self.end_rect=QRectF((parent.width()-self.side_width)//2,parent.height()-self.side_width,self.side_width,self.side_width)
-        elif type==22:#↑
+        elif self.type==22:#↑
             self.start_rect=QRectF((parent.width()-self.side_width)//2,parent.height()-self.side_width,self.side_width,self.side_width)
             self.end_rect=QRectF((parent.width()-self.side_width)//2,0,self.side_width,self.side_width)
-        elif type==31:#↙
+        elif self.type==31:#↙
             self.start_rect=QRectF(parent.width()-self.side_width-10,10,self.side_width,self.side_width)
             self.end_rect= QRectF(10,parent.height()-self.side_width-10,self.side_width,self.side_width)
-        elif type==32:#↗
+        elif self.type==32:#↗
             self.start_rect=QRectF(10,parent.height()-self.side_width-10,self.side_width,self.side_width)
             self.end_rect=QRectF(parent.width()-self.side_width-10,10,self.side_width,self.side_width)
-        elif type==41:#←
+        elif self.type==41:#←
             self.start_rect=QRectF(parent.width()-self.side_width,(parent.height()-self.side_width)//2,self.side_width,self.side_width)
             self.end_rect=QRectF(0,(parent.height()-self.side_width)//2,self.side_width,self.side_width)
-        elif type==42:#→
+        elif self.type==42:#→
             self.start_rect=QRectF(0,(parent.height()-self.side_width)//2,self.side_width,self.side_width)
             self.end_rect=QRectF(parent.width()-self.side_width,(parent.height()-self.side_width)//2,self.side_width,self.side_width)
         self.animation=QPropertyAnimation(self,b'geometry')
         self.animation.finished.connect(self.toggleAnimation)
-        self.animationSpeed(RwConfig.dnspeed)
-        self.startAnimation(RwConfig.dnopen,eval(RwConfig.dncurve))
+        from Rwconfig import rwconfig
+        self.animationSpeed(rwconfig.dnspeed)
+        self.startAnimation(rwconfig.dnopen,eval(rwconfig.dncurve))
     def paintEvent(self,event):
         super().paintEvent(event)
         painter=QPainter(self)

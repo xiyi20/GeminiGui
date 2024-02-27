@@ -4,12 +4,12 @@ from functools import partial
 
 class CheckUpdate:
     def check(self,skip=False,qt=None,Main_ins=None):
-        from Rwconfig import RwConfig
         if skip:
             self.checkUpdate(qt,Main_ins)
             return
         a=datetime.datetime.now()
-        b=RwConfig.lasttime+datetime.timedelta(days=int(RwConfig.interval))
+        from Rwconfig import rwconfig
+        b=rwconfig.lasttime+datetime.timedelta(days=int(rwconfig.interval))
         if a<b:return
         self.checkUpdate(qt,Main_ins)
     def checkUpdate(self,qt=None,Main_ins=None):
@@ -37,13 +37,13 @@ class CheckUpdate:
                                            '检查更新失败','QMessageBox.Icon.Warning',qt=qt))
         messagebox.messageSignal.emit('signal')
     def getdata(self):
-        from Msgbox import messagebox
         try:
             url="https://raw.githubusercontent.com/xiyi20/GeminiGui/main/update.json"
             response=requests.get(url)
             data=response.json()
             return data
         except Exception as e:
+            from Msgbox import messagebox
             messagebox.connectshow(partial(messagebox.showmsg,f'原因:\n{type(e).__name__}:{e}','检查更新失败','QMessageBox.Icon.Warning'))
             messagebox.messageSignal.emit('signal')
             return None

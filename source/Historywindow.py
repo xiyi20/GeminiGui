@@ -1,8 +1,6 @@
 from PyQt6.QtGui import QIcon
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QFrame,QMainWindow,QVBoxLayout,QTextEdit
-from Blurlabel import BlurredLabel
-from CustomFrame import CustomBanner
 
 class HistoryWindow(QMainWindow):
     def __init__(self):
@@ -10,9 +8,13 @@ class HistoryWindow(QMainWindow):
         self.ta=None
         self.center=None
         self.label=None
+        from CustomFrame import CustomAnimation
+        self.animation=CustomAnimation(self)
         self.initUI()
+    def closewindow(self):
+        from Rwconfig import rwconfig
+        self.animation.setanimation(rwconfig.opacity,0,500,slot=self.close)
     def initUI(self):
-        from Main import getcolor
         self.setWindowTitle('对话历史')
         self.move(50,80)
         self.setFixedSize(400,430)
@@ -25,6 +27,7 @@ class HistoryWindow(QMainWindow):
         layout_center=QVBoxLayout(self.center)
         layout_center.setSpacing(0)
         layout_center.setContentsMargins(0,0,0,0)
+        from Main import getcolor
         shapes=[
             {'type':11,'shape':1,'color':getcolor(),'last_time':6},
             {'type':21,'shape':3,'color':getcolor(),'last_time':5},
@@ -32,8 +35,10 @@ class HistoryWindow(QMainWindow):
             {'type':41,'shape':2,'color':getcolor(),'last_time':8},
             {'type':12,'shape':1,'color':getcolor(),'last_time':9},
         ]
+        from Blurlabel import BlurredLabel
         self.label=BlurredLabel(self.center,shapes)
-        banner=CustomBanner(self,'images/history.png','记录',[1,3])
+        from CustomFrame import CustomBanner
+        banner=CustomBanner(self,'images/history.png','记录',[1,4])
         layout_center.addWidget(banner)
         self.setCentralWidget(self.center)
 

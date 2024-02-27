@@ -1,10 +1,10 @@
 import markdown
 import google.generativeai as genai
-from Rwconfig import RwConfig
 
 class Gemini:
     def __init__(self,model="gemini-pro"):
-        genai.configure(api_key=RwConfig.apikey,transport='rest')
+        from Rwconfig import rwconfig
+        genai.configure(api_key=rwconfig.apikey,transport='rest')
         # Set up the model
         generation_config={
             "temperature": 0.9,

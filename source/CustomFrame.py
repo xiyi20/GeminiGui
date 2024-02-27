@@ -2,7 +2,7 @@ import os
 import sys
 import subprocess
 from PyQt6.QtGui import QIcon,QAction
-from PyQt6.QtCore import QSize,Qt
+from PyQt6.QtCore import QSize,Qt,QTimer,QPropertyAnimation,QObject,QEasingCurve
 from PyQt6.QtWidgets import QLabel,QFrame,QHBoxLayout,QPushButton,QMenu
 
 class CustomMenu(QMenu):
@@ -39,10 +39,11 @@ class CustomBanner(QFrame):
         self.mode=mode
         self.enlarge=enlarge
         self.mouse_pos=None
-        self.setFixedSize(parent.width(),30)
+        self.max=None
+        self.setMinimumSize(parent.width(),30)
         self.setStyleSheet('background:rgba(255,255,255,0.01);border-radius:15px')
-        self.initUi()
-    def initUi(self):
+        self.initUI()
+    def initUI(self):
         layout_banner=QHBoxLayout(self)
         layout_banner.setContentsMargins(0,0,0,0)
         icon=QPushButton()
@@ -53,8 +54,14 @@ class CustomBanner(QFrame):
         def modifyicon(qt,icon,text,event):
             qt.setIcon(QIcon(icon))
             if text is not None:
+                self.timer=QTimer()
+                self.timer.setSingleShot(True)
                 from Settingwindow import SettingWindow
-                SettingWindow.showtext(text)
+                self.timer.timeout.connect(lambda:SettingWindow.showtext(text))
+                self.timer.start(1000)
+            else:
+                if hasattr(self,'timer'):
+                    self.timer.stop()
             event.accept()
 
         mini=QPushButton()
@@ -62,6 +69,11 @@ class CustomBanner(QFrame):
         mini.clicked.connect(self.parent.showMinimized)
         mini.leaveEvent=lambda event:modifyicon(mini,'images/mini1.png',None,event)
         mini.enterEvent=lambda event:modifyicon(mini,'images/mini.png','最小化',event)
+        maxi=QPushButton()
+        maxi.setIcon(QIcon('images/maxi1.png'))
+        maxi.clicked.connect(lambda event:self.mouseDoubleClickEvent(event))
+        maxi.leaveEvent=lambda event:modifyicon(maxi,'images/maxi1.png',None,event)
+        maxi.enterEvent=lambda event:modifyicon(maxi,'images/maxi.png','最大化',event)
         reboot=QPushButton()
         reboot.setIcon(QIcon('images/reboot1.png'))
         reboot.clicked.connect(self.reboot)
@@ -69,11 +81,11 @@ class CustomBanner(QFrame):
         reboot.enterEvent=lambda event:modifyicon(reboot,'images/reboot.png','重启程序',event)
         close=QPushButton()
         close.setIcon(QIcon('images/close1.png'))
-        close.clicked.connect(self.parent.close)
+        close.clicked.connect(self.parent.closewindow)
         close.leaveEvent=lambda event:modifyicon(close,'images/close1.png',None,event)
         close.enterEvent=lambda event:modifyicon(close,'images/close.png','关闭',event)
 
-        mode_list={1:mini,2:reboot,3:close}
+        mode_list={1:mini,2:maxi,3:reboot,4:close}
         layout_banner.addSpacing(5)
         layout_banner.addWidget(icon)
         layout_banner.addWidget(name)
@@ -92,6 +104,18 @@ class CustomBanner(QFrame):
             os.system("taskkill /f /im Gemini.exe")
             subprocess.call('Gemini.exe')
 
+    def mouseDoubleClickEvent(self,event):
+        if self.enlarge:
+            if self.max is None:
+                self.parent.showMaximized()
+                self.max=True
+            else:
+                # self.parent.start_geometry=self.parent.geometry()
+                self.parent.showNormal()
+                # self.parent.end_geometry=self.parent.geometry()
+                self.max=None
+            self.resize(self.parent.width(),30)
+
     def mousePressEvent(self,event):
         self.mouse_pos=event.globalPosition()
         event.accept()
@@ -105,3 +129,16 @@ class CustomBanner(QFrame):
     def mouseReleaseEvent(self,event):
         self.mouse_pos=None
         event.accept()
+
+class CustomAnimation(QObject):
+    def __init__(self,parent) -> None:
+        super().__init__()
+        self.parent=parent
+    def setanimation(self,start,end,time,type=b'windowOpacity',curve=QEasingCurve.Type.Linear,slot=None):
+        self.animation=QPropertyAnimation(self.parent,type)
+        self.animation.setStartValue(start)
+        self.animation.setEndValue(end)
+        self.animation.setDuration(time)
+        self.animation.setEasingCurve(curve)
+        if slot is not None:self.animation.finished.connect(slot)
+        self.animation.start()

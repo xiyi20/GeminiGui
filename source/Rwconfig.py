@@ -5,11 +5,10 @@ class RwConfig:
     adminkey=apikey=blopen=blradius=bgcolor=bgtheme=qradius=\
     aradius=opacity=dnopen=dnspeed=dncurve=interval=lasttime=None
     def __init__(self):
-        from Msgbox import messagebox
-        import Main
         def loadconfig(path):
             try:
                 with open(path) as f:
+                    import Main
                     Main.config=json.load(f)
                     self.rconfig(Main.config)
             except FileNotFoundError:
@@ -25,6 +24,7 @@ class RwConfig:
             if state:break
             else:
                 if i==len(configs)-1:
+                    from Msgbox import messagebox
                     if error==1:messagebox.showmsg('配置文件不存在或路径错误!');exit()
                     elif error==2:messagebox.showmsg('配置文件不是有效的JSON格式!');exit()
                     else:messagebox.showmsg('没有足够权限读取或写入配置文件!');exit()
