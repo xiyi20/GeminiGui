@@ -1,5 +1,5 @@
 {
-    "version": 2.40,
-    "desc": "优化程序导包逻辑,加入窗口动画,修改线程使用(强烈建议更新)",
-    "url": "https://github.com/xiyi20/GeminiGui/actions/runs/8063900037/artifacts/1278463934"
+    "version": 2.45,
+    "desc": "修复内置api失效,优化按键处理",
+    "url": "https://github.com/xiyi20/GeminiGui/actions/runs/8593256926/artifacts/1392625556"
 }
