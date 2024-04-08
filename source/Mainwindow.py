@@ -131,7 +131,19 @@ class MainWindow(QMainWindow):
         layout_f1.addWidget(l1)
         layout_f1.addStretch()
 
+        def enter(event):
+            modifier=event.modifiers()
+            key=event.key()
+            if modifier==Qt.KeyboardModifier.ShiftModifier and (key==Qt.Key.Key_Enter or key==Qt.Key.Key_Return):
+                cursor=self.t1.textCursor()
+                cursor.insertText('\n')
+            elif key==Qt.Key.Key_Enter or key==Qt.Key.Key_Return:
+                self.answer_thread.start()
+            else:
+                QTextEdit.keyPressEvent(self.t1,event)
+            
         self.t1=QTextEdit()
+        self.t1.keyPressEvent=enter
         self.t1.setMinimumSize(int(m_width*0.9),int(m_height*0.3))
         from CustomFrame import CustomMenu
         CustomMenu(self.t1,[1,2,3,4,5]).setmenu()
