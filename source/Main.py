@@ -11,7 +11,7 @@ class Main:
     find_text=re.compile(r'text: "(.*?)"')
     find_color=re.compile(r'background:(.*?);')
     def __init__(self) -> None:
-        self.VERSION=2.40
+        self.VERSION=2.45
         self.m_width=None
         self.m_height=None
         self.l14=None
