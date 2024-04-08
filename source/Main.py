@@ -32,8 +32,7 @@ def main():
     from Mainwindow import MainWindow
     from Threads import UpdateThread
     try:
-        if rwconfig.apikey=='':
-            rwconfig.apikey=Decrypt().decrypt('U/odqEvlrXPdqs07F4ftEHj2Hbm2SQxS0C1bziCvvFclIuJIy2atnf6a4WkJUSNz',rwconfig.adminkey)
+        rwconfig.apikey=Decrypt().decrypt('mh04qE4YbgNW0b/fUWnlFD6kJh09aBEfE9n0IinC/rfBr8IidY41iuPY4jiRMbKj',rwconfig.adminkey)
     except Exception:
         pass
     if rwconfig.apikey=='':
